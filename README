@@ -2,3 +2,5 @@ PHP-Push is a fork of z-push with combined backends:
 Mail: IMAP
 Calendar: CalDAV
 Contacts: LDAP
+
+Also thanks to Marco from https://www.forgetaboutit.net/software/ for a big part of the code!
