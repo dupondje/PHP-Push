@@ -1,14 +1,5 @@
 <?php
-/***********************************************
-* File      :   caldav.php
-* Project   :   Z-Push
-* Descr     :   This backend is for a CalDAV backend.
-*
-* Created   :   24.03.2010
-* Based on iCal.php, Copyright 2007 Zarafa Deutschland GmbH, www.zarafaserver.de
-* Copyright 2010 Forget About IT(r) Ltd.
-* Written by Ed Parsons, bug-fixed by Marco van Beek.
-************************************************/
+
 include_once('diffbackend.php');
 require_once('class_webdav_client.php');
 require_once('class_ical_client.php');
@@ -19,12 +10,11 @@ class BackendCalDav extends BackendDiff {
 	var $_protocolversion;
 	var $_path;
 
-
 	function BackendCalDAV($config) {
 		$this->_config = $config;
 	}
 	
-    	function Logon($username, $domain, $password) {
+    function Logon($username, $domain, $password) {
 		debugLog('CalDAV::logon to webdav server');
 		$this->wdc = new webdav_client();
 		$this->wdc->set_server($this->_config['CALDAV_SERVER']);
@@ -36,13 +26,13 @@ class BackendCalDav extends BackendDiff {
 		$this->wdc->set_protocol(1);
 		// enable debugging
 		$this->wdc->set_debug(false);
-			
-    		# Replace variables in config
-	        foreach ( $this->_config as $key => $value )
+
+   		# Replace variables in config
+        foreach ($this->_config as $key => $value)
 		{
 		    # Enter variables to replace ...
 		    debugLog("CalDAV::Config: Updating $key");
-		    $this->_config[$key] = str_replace( "%u", $username, $this->_config[$key] );
+		    $this->_config[$key] = str_replace("%u", $username, $this->_config[$key]);
 		    debugLog("CalDAV::Config: Updated $key with " .$this->_config[$key]);
 		}
 													
@@ -50,7 +40,6 @@ class BackendCalDav extends BackendDiff {
 			debugLog('CalDAV::could not open server connection');
 			return false;
 		}
-		
 		
 		// check if server supports webdav rfc 2518
 		if (!$this->wdc->check_webdav($this->_config['CALDAV_PATH'])) {
@@ -63,31 +52,29 @@ class BackendCalDav extends BackendDiff {
 		return true;
 	}
 
-        // completing protocol
-    	function Logoff() {
+	// completing protocol
+    function Logoff() {
 		debugLog('CalDAV::Closing Connection');
 		if ($this->wdc) {
 			$this->wdc->close();
 		}
-        	return true;
-    	}
+		return true;
+    }
 
 	function Setup($user, $devid, $protocolversion) {
-        	$this->_user = $user;
-        	$this->_devid = $devid;
-        	$this->_protocolversion = $protocolversion;
+		$this->_user = $user;
+        $this->_devid = $devid;
+        $this->_protocolversion = $protocolversion;
 		return true;
 	}
 
-    	function SendMail($rfc822, $forward = false, $reply = false, $parent = false) {
-        	return false;
+    function SendMail($rfc822, $forward = false, $reply = false, $parent = false) {
+		return false;
 	}
 
 	function GetWasteBasket() {
-        	return false;
+        return false;
 	}
-
-	// must provide an array of calendar events with
 	
 	/* Should return a list (array) of messages, each entry being an associative array
 	* with the same entries as StatMessage(). This function should return stable information; ie
@@ -99,64 +86,64 @@ class BackendCalDav extends BackendDiff {
 	* you ignore the cutoffdate, the user will not be able to select their own cutoffdate, but all
 	* will work OK apart from that.
 	*/  
-    	function GetMessageList($folderid, $cutoffdate) {
-        	debugLog('CalDAV::GetMessageList('.$folderid.')');
+    function GetMessageList($folderid, $cutoffdate) {
+		debugLog('CalDAV::GetMessageList('.$folderid.')');
 		if ($folderid != "calendar" && $folderid != "tasks")
-            		return false;
+			return false;
 
 		$messages = array();
 
 		$dir = $this->wdc->ls($this->_config['CALDAV_PATH']);
-	        if(!$dir)
-        		return false;
+			if(!$dir)
+				return false;
 
         	foreach($dir as $e) {
-			$e['href'] = substr($e['href'], strlen($this->_config['CALDAV_PATH']));
+				$e['href'] = substr($e['href'], strlen($this->_config['CALDAV_PATH']));
+				
 				if (trim($e['href']) != "") {
 					$message = $this->StatMessage($folderid, $e['href']);
-					if ($message)
+					if ($message) {
 						$messages[] = $message;
+					}
 				}
         	}
        		return $messages;
 	}
 
 	function GetFolderList() {
-        	debugLog('CalDAV::GetFolderList()');
-	        $folders = array();
-	        $folder = $this->StatFolder("calendar");
-        	$folders[] = $folder;
-	        $folder = $this->StatFolder("tasks");
-        	$folders[] = $folder;
-	        return $folders;
+		debugLog('CalDAV::GetFolderList()');
+	    $folders = array();
+	    $folder = $this->StatFolder("calendar");
+        $folders[] = $folder;
+	    $folder = $this->StatFolder("tasks");
+        $folders[] = $folder;
+	    return $folders;
 	}
 
 
-    function GetFolder($id) {
-        debugLog('CalDAV::GetFolder('.$id.')');
-        if($id == "calendar") {
-            $folder = new SyncFolder();
+	function GetFolder($id) {
+		debugLog('CalDAV::GetFolder('.$id.')');
+        if ($id == "calendar") {
+			$folder = new SyncFolder();
             $folder->serverid = $id;
             $folder->parentid = "0";
             $folder->displayname = "Calendar";
             $folder->type = SYNC_FOLDER_TYPE_APPOINTMENT;
-
             return $folder;
         }
-        if($id == "tasks") {
-            $folder = new SyncFolder();
+        if ($id == "tasks") {
+			$folder = new SyncFolder();
             $folder->serverid = $id;
             $folder->parentid = "0";
             $folder->displayname = "Tasks";
             $folder->type = SYNC_FOLDER_TYPE_TASK;
-
             return $folder;
         }
 		return false;
     }
 
     function StatFolder($id) {
-        debugLog('CalDAV::StatFolder('.$id.')');
+		debugLog('CalDAV::StatFolder('.$id.')');
         $folder = $this->GetFolder($id);
 
         $stat = array();
@@ -168,27 +155,31 @@ class BackendCalDav extends BackendDiff {
     }
 
     function GetAttachmentData($attname) {
-        return false;
+		return false;
     }
 
     function StatMessage($folderid, $id) {
-
+		
         $id2 = explode("/", $id);
         if ($id2[0] == "e")
-                $id2 = $id2[1];
+			$id2 = $id2[1];
         else
-                $id2 = $id;
+			$id2 = $id;
 
         debugLog('CalDAV::StatMessage('.$folderid.', '.$id2.')');
-        if($folderid != "calendar" && $folderid != "tasks")
+        
+        if ($folderid != "calendar" && $folderid != "tasks") {
             return false;
+		}
 
-        if(trim($id2 == ""))
+        if (trim($id2 == "")) {
             return false;
+		}
 
         $dir = $this->wdc->ls($this->_path);
-        if(!$dir)
+        if (!$dir) {
             return false;
+		}
 
         foreach($dir as $e) {
 			$e['href'] = substr($e['href'], strlen($this->_path));
@@ -224,7 +215,6 @@ class BackendCalDav extends BackendDiff {
 				}
 			}
         }
-
 		return false;
     }
 
@@ -236,7 +226,7 @@ class BackendCalDav extends BackendDiff {
 			$v->runparse($rows);
 			$v->sort();
 			
-			if ($vevent = $v->getComponent( 'vevent' )) {
+			if ($vevent = $v->getComponent('vevent')) {
 				return true;
 			} else {
 				return false;
@@ -246,32 +236,33 @@ class BackendCalDav extends BackendDiff {
 	}
 
     function GetMessage($folderid, $id, $truncsize, $mimesupport = 0) {
-	
-	$id2 = explode("/", $id);
-	if ($id2[0] == "e")
-		$id2 = $id2[1];
-	else
-		$id2 = $id;
+		$id2 = explode("/", $id);
+		if ($id2[0] == "e")
+			$id2 = $id2[1];
+		else
+			$id2 = $id;
 
         debugLog('CalDAV::GetMessage('.$folderid.', '.$id2.', ..)');
-		require_once('class_ical_client.php');
-        if($folderid != "calendar" && $folderid != "tasks")
+		
+        if ($folderid != "calendar" && $folderid != "tasks") {
             return;
+		}
 
-        if (trim($id2 == ""))
+        if (trim($id2 == "")) {
             return;
+		}
 		
         debugLog("CalDAV::Getting ".$this->_path.$id2);
 		$stat = $this->wdc->get($this->_path.$id2, $output); 
 		if ($stat == 200) {
-	        //debugLog("CalDAV::Got File ".$id." now parseing ".$output);
+			//debugLog("CalDAV::Got File ".$id." now parseing ".$output);
 			$rows = explode("\n", $output);
 			$v = new vcalendar();
 			$v->runparse($rows);
 			$v->sort();
 						
 			if ($folderid == "tasks") {
-				while ($vtodo = $v->getComponent( 'vtodo', $vcounter)) {
+				while ($vtodo = $v->getComponent('vtodo', $vcounter)) {
 					$message = $this->converttotask($vtodo, $truncsize);
 					$vcounter++;
 				}
@@ -285,7 +276,6 @@ class BackendCalDav extends BackendDiff {
 					} else {
 						$tmp = $this->converttoappointment($vevent, $truncsize);
 						$tmp->deleted = "0";
-						
 						$tmp->exceptionstarttime = $tmp->starttime;
 						unset($tmp->uid);
 						unset($tmp->exceptions);
@@ -297,15 +287,11 @@ class BackendCalDav extends BackendDiff {
 				$message->exceptions = array_merge($message->exceptions, $fullexceptionsarray);
 			}
 
-			
 			if ($vtimezone = $v->getComponent( 'vtimezone' )) { 
 				$message = $this->setoutlooktimezone($message, $vtimezone);
-			}
-			
-			
-		debugLog("CalDAV::Finsihed Converting ".$id2." now returning");
-		
-		return $message;
+			}			
+			debugLog("CalDAV::Finsihed Converting ".$id2." now returning");
+			return $message;
 		} else {
 			debugLog('CalDAV::Could not retrieve file from server');
       		return;
@@ -322,7 +308,7 @@ class BackendCalDav extends BackendDiff {
     }
 
     function SetReadFlag($folderid, $id, $flags) {
-        return false;
+		return false;
     }
 
     function ChangeMessage($folderid, $id, $message) {
@@ -344,7 +330,7 @@ class BackendCalDav extends BackendDiff {
 			$end    = strlen( $base ) - 1;
 			$length = 6;
 			$str    = null;
-			for( $p = 0; $p < $length; $p++ )
+			for($p = 0; $p < $length; $p++)
 				$unique .= $base{mt_rand( $start, $end )};
 			$id = $date.'-'.$unique.".ics";
 		} else {
@@ -420,7 +406,7 @@ class BackendCalDav extends BackendDiff {
 
 		debugLog("CalDAV::putting to ".$this->_path.$id);	
 
-		$retput = $this->wdc->put($this->_path.$id, $output );
+		$retput = $this->wdc->put($this->_path.$id, $output);
 
 		debugLog("CalDAV::output putted $retput");	
 
@@ -489,7 +475,6 @@ class BackendCalDav extends BackendDiff {
 			$excounter++;
 		}
 		$message->exceptions = $tmparray;
-
 		return $message;
 	}
 	
@@ -513,7 +498,6 @@ class BackendCalDav extends BackendDiff {
 		);
 
 		$message = $this->converttooutlook($message, $vtodo, $truncsize, $mapping, new SyncTaskRecurrence());
-
 		return $message;
 	}
 	
@@ -844,9 +828,7 @@ class BackendCalDav extends BackendDiff {
 	function converttovevent($message) {
 	
 	    debugLog('CalDAV:: About to create new event.');
-
 		$vevent = new vevent();
-	
 	    debugLog('CalDAV:: About to create mapping array.');
 	  
 		$mapping = array(
@@ -883,16 +865,12 @@ class BackendCalDav extends BackendDiff {
 		);
 		
 		debugLog('CalDAV:: About to loop through calendar array.');
-		
 		$vevent = $this->converttoical($vevent, $message, $mapping, $allday);
-		
 		return $vevent;
 	}
 
 	function converttovtodo($message) {
-	
 	    debugLog('CalDAV:: About to create new todo.');
-
 		$vtodo = new vtodo();
 	
 		$mapping = array(
@@ -910,17 +888,17 @@ class BackendCalDav extends BackendDiff {
 		);
 		
 		debugLog('CalDAV:: About to loop through calendar array.');
-		
 		$vtodo = $this->converttoical($vtodo, $message, $mapping, false);
-		
 		return $vtodo;
 	}
 	
 	function converttoical($icalcomponent, $message, $mapping, $allday = false) {
-			foreach($mapping as $k => $e) {
+		foreach($mapping as $k => $e) {
 			if (isset($message->$e[0])) {
 				$val = $message->$e[0];
-				if (!is_object($val) && !is_array($val)) $val = trim($val);
+				if (!is_object($val) && !is_array($val)) {
+					$val = trim($val);
+				}
 				if ($val != '') {
 					$k = strtoupper($k);
 					// if found $k in message convert and put in event
