@@ -106,10 +106,6 @@ function utf8_to_windows1252($string, $option = "")
     if (defined('STORE_SUPPORTS_UNICODE') && STORE_SUPPORTS_UNICODE == true) return $string;
 
     if (function_exists("iconv")){
-        // replace 0xA0 as it is considered an illegal character in UTF-8 / see Mantis #314
-        // we also replace correct encoded non-breaking spaces to simple spaces
-        $string = str_replace(chr(0xA0), chr(0x20), str_replace(chr(0xC2).chr(0xA0), chr(0x20), $string));
-
         return @iconv("UTF-8", "Windows-1252" . $option, $string);
     }else{
         return utf8_decode($string); // no euro support here

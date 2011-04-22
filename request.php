@@ -495,6 +495,12 @@ function HandleSync($backend, $protocolversion, $devid) {
             }
         }
 
+        // limit items to be synchronized to the mobiles if configured
+        if (defined('SYNC_FILTERTIME_MAX') && SYNC_FILTERTIME_MAX > SYNC_FILTERTYPE_ALL &&
+            (!isset($collection["filtertype"]) || $collection["filtertype"] > SYNC_FILTERTIME_MAX)) {
+                $collection["filtertype"] = SYNC_FILTERTIME_MAX;
+        }
+
         // compatibility mode - get folderid from the state directory
         if (!isset($collection["collectionid"])) {
             $collection["collectionid"] = _getFolderID($devid, $collection["class"]);
@@ -502,7 +508,7 @@ function HandleSync($backend, $protocolversion, $devid) {
 
         // set default conflict behavior from config if the device doesn't send a conflict resolution parameter
         if (!isset($collection["conflict"])) {
-            $collection["conflict"] = SYNC_CONFLICT_DEFAULT;
+            $collection["conflict"] = (defined('SYNC_CONFLICT_DEFAULT'))? SYNC_CONFLICT_DEFAULT : SYNC_CONFLICT_OVERWRITE_PIM ;
         }
 
         //compatibility mode - set maxitems if the client doesn't send it as it breaks some devices
@@ -1488,7 +1494,8 @@ function HandleProvision($backend, $devid, $protocolversion) {
     else {
         if (!$phase2) {
             $policykey = $backend->generatePolicyKey();
-            $backend->setPolicyKey($policykey, $devid);
+            //android sends "validate" as deviceid, it does not need to be added to the device list
+            if (strcasecmp("validate", $devid) != 0) $backend->setPolicyKey($policykey, $devid);
         }
         else {
             // just create a temporary key (i.e. iPhone OS4 Beta does not like policykey 0 in response)

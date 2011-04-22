@@ -240,7 +240,7 @@ class BackendIMAP extends BackendDiff {
             $body = $this->getBody($message);
 
         // reply
-        if (isset($reply) && isset($parent) &&  $reply && $parent) {
+        if ($reply && $parent) {
             $this->imap_reopenFolder($parent);
             // receive entire mail (header + body) to decode body correctly
             $origmail = @imap_fetchheader($this->_mbox, $reply, FT_UID) . @imap_body($this->_mbox, $reply, FT_PEEK | FT_UID);
@@ -254,11 +254,11 @@ class BackendIMAP extends BackendDiff {
 
         // encode the body to base64 if it was sent originally in base64 by the pda
         // contrib - chunk base64 encoded body
-        if ($body_base64 && !isset($forward)) $body = chunk_split(base64_encode($body));
+        if ($body_base64 && !$forward) $body = chunk_split(base64_encode($body));
 
 
         // forward
-        if (isset($forward) && isset($parent) && $forward && $parent) {
+        if ($forward && $parent) {
             $this->imap_reopenFolder($parent);
             // receive entire mail (header + body)
             $origmail = @imap_fetchheader($this->_mbox, $forward, FT_UID) . @imap_body($this->_mbox, $forward, FT_PEEK | FT_UID);
@@ -267,7 +267,7 @@ class BackendIMAP extends BackendDiff {
                 // contrib - chunk base64 encoded body
                 if ($body_base64) $body = chunk_split(base64_encode($body));
                 //use original boundary if it's set
-                $boundary = (isset($org_boundary) && $org_boundary) ? $org_boundary : false;
+                $boundary = ($org_boundary) ? $org_boundary : false;
                 // build a new mime message, forward entire old mail as file
                 list($aheader, $body) = $this->mail_attach("forwarded_message.eml",strlen($origmail),$origmail, $body, $forward_h_ct, $forward_h_cte,$boundary);
                 // add boundary headers
@@ -572,19 +572,19 @@ class BackendIMAP extends BackendDiff {
             $folder->type = SYNC_FOLDER_TYPE_SENTMAIL;
             $this->_sentID = $id;
         }
-        // courier-imap outputs
-        else if($lid == "inbox.drafts") {
+        // courier-imap and cyrus-imapd outputs
+        else if($lid == "inbox.drafts" || $lid == "inbox/drafts") {
             $folder->parentid = $fhir[0];
             $folder->displayname = "Drafts";
             $folder->type = SYNC_FOLDER_TYPE_DRAFTS;
         }
-        else if($lid == "inbox.trash") {
+        else if($lid == "inbox.trash" || $lid == "inbox/trash") {
             $folder->parentid = $fhir[0];
             $folder->displayname = "Trash";
             $folder->type = SYNC_FOLDER_TYPE_WASTEBASKET;
             $this->_wasteID = $id;
         }
-        else if($lid == "inbox.sent") {
+        else if($lid == "inbox.sent" || $lid == "inbox/sent") {
             $folder->parentid = $fhir[0];
             $folder->displayname = "Sent";
             $folder->type = SYNC_FOLDER_TYPE_SENTMAIL;
@@ -961,7 +961,7 @@ class BackendIMAP extends BackendDiff {
 
         $this->getBodyRecursive($message, "plain", $body);
 
-        if(!isset($body) || $body === "") {
+        if($body === "") {
             $this->getBodyRecursive($message, "html", $body);
             // remove css-style tags
             $body = preg_replace("/<style.*?<\/style>/is", "", $body);

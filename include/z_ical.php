@@ -119,7 +119,7 @@ class ZPush_ical{
                             case 'UID':
                                 $goid = GetPropIDFromString($this->_store, "PT_BINARY:{6ED8DA90-450B-101B-98DA-00AA003F1305}:0x3");
                                 $goid2 = GetPropIDFromString($this->_store, "PT_BINARY:{6ED8DA90-450B-101B-98DA-00AA003F1305}:0x23");
-                                $mapiprops[$goid] = $mapiprops[$goid2] = hex2bin($data);
+                                $mapiprops[$goid] = $mapiprops[$goid2] = getOLUidFromICalUid($data);
                                 break;
 
                             case 'ATTENDEE':
