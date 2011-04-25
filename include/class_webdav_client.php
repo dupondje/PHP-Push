@@ -1566,7 +1566,7 @@ class webdav_client {
 	* @return string translated_uri
 	* @access private
 	*/
-	function _translate_uri($uri) {
+	public function _translate_uri($uri) {
 		// remove all html entities...
 		$native_path = html_entity_decode($uri);
 		$parts = explode('/', $native_path);

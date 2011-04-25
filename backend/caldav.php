@@ -98,7 +98,8 @@ class BackendCalDav extends BackendDiff {
                 return false;
 
             foreach($dir as $e) {
-                $e['href'] = substr($e['href'], strlen($this->_config['CALDAV_PATH']));
+                $path = $this->wdc->_translate_uri($this->_config['CALDAV_PATH']);
+                $e['href'] = substr($e['href'], strlen($path));
                 
                 if (trim($e['href']) != "") {
                     $message = $this->StatMessage($folderid, $e['href']);
@@ -159,20 +160,14 @@ class BackendCalDav extends BackendDiff {
     }
 
     function StatMessage($folderid, $id) {
-        
-        $id2 = explode("/", $id);
-        if ($id2[0] == "e")
-            $id2 = $id2[1];
-        else
-            $id2 = $id;
 
-        debugLog('CalDAV::StatMessage('.$folderid.', '.$id2.')');
+        debugLog('CalDAV::StatMessage('.$folderid.', '.$id.')');
         
         if ($folderid != "calendar" && $folderid != "tasks") {
             return false;
         }
 
-        if (trim($id2 == "")) {
+        if (trim($id == "")) {
             return false;
         }
 
@@ -183,14 +178,12 @@ class BackendCalDav extends BackendDiff {
 
         foreach($dir as $e) {
             $e['href'] = substr($e['href'], strlen($this->_path));
-            if ($e['href'] == $id2 || $e['href'] == "e/".$id2) {
-                //$event = $this->isevent($this->_path.$e['href']);
-                $event = $this->isevent($this->_path.$id2);
-                debugLog('CalDAV::StatMessage('.$folderid.', '.$id2.') is '.$event);
+            if ($e['href'] == $id) {
+                $event = $this->isevent($this->_path.$e['href']);
+                debugLog('CalDAV::StatMessage('.$folderid.', '.$id.') is '.$event);
                 if ($event && $folderid == "calendar") {
                     $message = array();
-                    //$message["id"] = $e['href'];
-                    $message["id"] = $id2;
+                    $message["id"] = $e['href'];
                     if (array_key_exists('lastmodified', $e)) {
                         $message["mod"] = $e['lastmodified'];
                         debugLog('CalDAV::message moded at '.$e['lastmodified']);
@@ -202,8 +195,7 @@ class BackendCalDav extends BackendDiff {
                 }
                 if (!$event && $folderid == "tasks") {
                     $message = array();
-                    //$message["id"] = $e['href'];
-                    $message["id"] = $id2;
+                    $message["id"] = $e['href'];
                     if (array_key_exists('lastmodified', $e)) {
                         $message["mod"] = $e['lastmodified'];
                         debugLog('CalDAV::message moded at '.$e['lastmodified']);
@@ -236,24 +228,19 @@ class BackendCalDav extends BackendDiff {
     }
 
     function GetMessage($folderid, $id, $truncsize, $mimesupport = 0) {
-        $id2 = explode("/", $id);
-        if ($id2[0] == "e")
-            $id2 = $id2[1];
-        else
-            $id2 = $id;
 
-        debugLog('CalDAV::GetMessage('.$folderid.', '.$id2.', ..)');
+        debugLog('CalDAV::GetMessage('.$folderid.', '.$id.', ..)');
         
         if ($folderid != "calendar" && $folderid != "tasks") {
             return;
         }
 
-        if (trim($id2 == "")) {
+        if (trim($id == "")) {
             return;
         }
         
-        debugLog("CalDAV::Getting ".$this->_path.$id2);
-        $stat = $this->wdc->get($this->_path.$id2, $output); 
+        debugLog("CalDAV::Getting ".$this->_path.$id);
+        $stat = $this->wdc->get($this->_path.$id, $output); 
         if ($stat == 200) {
             //debugLog("CalDAV::Got File ".$id." now parseing ".$output);
             $rows = explode("\n", $output);
