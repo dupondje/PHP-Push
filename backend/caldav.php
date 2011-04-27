@@ -9,6 +9,7 @@ class BackendCalDav extends BackendDiff {
     var $_devid;
     var $_protocolversion;
     var $_path;
+    var $_dir;
 
     function BackendCalDAV($config) {
         $this->_config = $config;
@@ -93,22 +94,22 @@ class BackendCalDav extends BackendDiff {
 
         $messages = array();
 
-        $dir = $this->wdc->ls($this->_config['CALDAV_PATH']);
-            if(!$dir)
-                return false;
+        $this->_dir = $this->wdc->ls($this->_config['CALDAV_PATH']);
+        if (!$this->_dir)
+		return false;
 
-            foreach($dir as $e) {
-                $path = $this->wdc->_translate_uri($this->_config['CALDAV_PATH']);
-                $e['href'] = substr($e['href'], strlen($path));
-                
-                if (trim($e['href']) != "") {
-                    $message = $this->StatMessage($folderid, $e['href']);
-                    if ($message) {
-                        $messages[] = $message;
-                    }
-                }
-            }
-            return $messages;
+	foreach($this->_dir as $e) {
+		$this->_path = $this->wdc->_translate_uri($this->_config['CALDAV_PATH']);
+		$e['href'] = substr($e['href'], strlen($this->_path));
+			
+		if (trim($e['href']) != "") {
+			$message = $this->StatMessage($folderid, $e['href']);
+			if ($message) {
+				$messages[] = $message;
+			}
+		}
+	}
+	return $messages;
     }
 
     function GetFolderList() {
@@ -160,8 +161,6 @@ class BackendCalDav extends BackendDiff {
     }
 
     function StatMessage($folderid, $id) {
-
-        debugLog('CalDAV::StatMessage('.$folderid.', '.$id.')');
         
         if ($folderid != "calendar" && $folderid != "tasks") {
             return false;
@@ -170,13 +169,15 @@ class BackendCalDav extends BackendDiff {
         if (trim($id == "")) {
             return false;
         }
-
-        $dir = $this->wdc->ls($this->_path);
-        if (!$dir) {
+        
+        if (!$this->_dir) {
+            $this->_dir = $this->wdc->ls($this->_path);
+        }
+        if (!$this->_dir) {
             return false;
         }
 
-        foreach($dir as $e) {
+        foreach($this->_dir as $e) {
             $e['href'] = substr($e['href'], strlen($this->_path));
             if ($e['href'] == $id) {
                 $event = $this->isevent($this->_path.$e['href']);
@@ -277,7 +278,7 @@ class BackendCalDav extends BackendDiff {
             if ($vtimezone = $v->getComponent( 'vtimezone' )) { 
                 $message = $this->setoutlooktimezone($message, $vtimezone);
             }           
-            debugLog("CalDAV::Finsihed Converting ".$id2." now returning");
+            debugLog("CalDAV::Finsihed Converting ".$id." now returning");
             return $message;
         } else {
             debugLog('CalDAV::Could not retrieve file from server');
