@@ -306,7 +306,6 @@ class BackendLDAP_Contacts extends BackendDiff {
 
 
         $message_entry = $this->GetMessageEntry( $folderid, $id );
-debugLog(print_r($message_entry, true));
         if ( $message_entry ) {
             list( $result_id, $entry_id ) = $message_entry;
 
