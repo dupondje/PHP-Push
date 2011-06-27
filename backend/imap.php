@@ -150,6 +150,7 @@ class BackendIMAP extends BackendDiff {
         $body_base64 = false;
         $org_charset = "";
         $org_boundary = false;
+        $multipartmixed = false;
         foreach($message->headers as $k => $v) {
             if ($k == "subject" || $k == "to" || $k == "cc" || $k == "bcc")
                 continue;
@@ -329,6 +330,7 @@ class BackendIMAP extends BackendDiff {
                         $att_boundary = strtoupper(md5(uniqid(time())));
                         // add boundary headers
                         $headers .= "\n" . "Content-Type: multipart/mixed; boundary=$att_boundary";
+                        $multipartmixed = true;
                     }
 
                     foreach($mess2->parts as $part) {
@@ -359,6 +361,20 @@ class BackendIMAP extends BackendDiff {
                             }
                         }
                     }
+                    if ($multipartmixed) {
+                        //this happens if a multipart/alternative message is forwarded
+                        //then it's a multipart/mixed message which consists of:
+                        //1. text/plain part which was written on the mobile
+                        //2. multipart/alternative part which is the original message
+                        $body = "This is a message with multiple parts in MIME format.\n--".
+                                $att_boundary.
+                                "\nContent-Type: $forward_h_ct\nContent-Transfer-Encoding: $forward_h_cte\n\n".
+                                (($body_base64) ? chunk_split(base64_encode($message->body)) : rtrim($message->body)).
+                                "\n--".$att_boundary.
+                                "\nContent-Type: {$mess2->headers['content-type']}\n\n".
+                                @imap_body($this->_mbox, $forward, FT_PEEK | FT_UID)."\n\n";
+                    }
+
                     $body .= "--$att_boundary--\n\n";
                 }
 
@@ -373,6 +389,10 @@ class BackendIMAP extends BackendDiff {
         // remove carriage-returns from body
         $body = str_replace("\r\n", "\n", $body);
 
+        if (!$multipartmixed) {
+            if (!empty($forward_h_ct)) $headers .= "\nContent-Type: $forward_h_ct";
+            if (!empty($forward_h_cte)) $headers .= "\nContent-Transfer-Encoding: $forward_h_cte";
+        }
         //advanced debugging
         //debugLog("IMAP-SendMail: parsed message: ". print_r($message,1));
         //debugLog("IMAP-SendMail: headers: $headers");
@@ -440,6 +460,16 @@ class BackendIMAP extends BackendDiff {
      * are always handled as real deletes and will be sent to your importer as a DELETE
      */
     function GetWasteBasket() {
+        if ($this->_wasteID == false) {
+            //try to get the waste basket without doing complete hierarchy sync
+            $wastebaskt = @imap_getmailboxes($this->_mbox, $this->_server, "Trash");
+            if (isset($wastebaskt[0])) {
+                $this->_wasteID = imap_utf7_decode(substr($wastebaskt[0]->name, strlen($this->_server)));
+                return $this->_wasteID;
+            }
+            //try get waste id from hierarchy if it wasn't possible with above for some reason
+            $this->GetHierarchy();
+        }
         return $this->_wasteID;
     }
 

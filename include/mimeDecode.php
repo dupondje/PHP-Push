@@ -233,7 +233,7 @@ class Mail_mimeDecode
             $this->_rfc822_bodies  = isset($params['rfc_822bodies']) ?
                                  $params['rfc_822bodies']  : false;
             $this->_charset = isset($params['charset']) ?
-                                 $params['charset'] : 'utf-8';
+                                 strtolower($params['charset']) : 'utf-8';
 
             $structure = $this->_decode($this->_header, $this->_body);
             if ($structure === false) {
@@ -365,9 +365,9 @@ class Mail_mimeDecode
                 default:
                     if(!isset($content_transfer_encoding['value']))
                         $content_transfer_encoding['value'] = '7bit';
-                        // if there is no explicit charset, then don't try to convert to default charset
-                        $charset = isset($return->ctype_parameters['charset']) ? $return->ctype_parameters['charset'] : '';
-                        $this->_include_bodies ? $return->body = ($this->_decode_bodies ? $this->_decodeBody($body, $content_transfer_encoding['value'], $charset) : $body) : null;
+                    // if there is no explicit charset, then don't try to convert to default charset, and make sure that only text mimetypes are converted
+                    $charset = (isset($return->ctype_parameters['charset']) && ((isset($return->ctype_primary) && $return->ctype_primary == 'text') || !isset($return->ctype_primary)) )? $return->ctype_parameters['charset']: '';
+                    $this->_include_bodies ? $return->body = ($this->_decode_bodies ? $this->_decodeBody($body, $content_transfer_encoding['value'], $charset) : $body) : null;
                     break;
             }
 
@@ -898,7 +898,7 @@ class Mail_mimeDecode
      * @access private
      */
     function _fromCharset($charset, $input) {
-        if($charset == '' || ($charset == $this->_charset))
+        if($charset == '' || (strtolower($charset) == $this->_charset))
             return $input;
 
         return @iconv($charset, $this->_charset. "//TRANSLIT", $input);
