@@ -392,6 +392,10 @@ class BackendIMAP extends BackendDiff {
         if (!$multipartmixed) {
             if (!empty($forward_h_ct)) $headers .= "\nContent-Type: $forward_h_ct";
             if (!empty($forward_h_cte)) $headers .= "\nContent-Transfer-Encoding: $forward_h_cte";
+            //if body was quoted-printable, convert it again
+            if (isset($message->headers["content-transfer-encoding"]) && strtolower($message->headers["content-transfer-encoding"]) == "quoted-printable") {
+                $body = quoted_printable_encode($body);
+            }
         }
         //advanced debugging
         //debugLog("IMAP-SendMail: parsed message: ". print_r($message,1));
@@ -506,7 +510,7 @@ class BackendIMAP extends BackendDiff {
                 $vars = get_object_vars($overview);
                 if (array_key_exists( "date", $vars)) {
                     // message is out of range for cutoffdate, ignore it
-                    if(strtotime($overview->date) < $cutoffdate) continue;
+                    if ($this->cleanupDate($overview->date) < $cutoffdate) continue;
                     $date = $overview->date;
                 }
 
@@ -782,6 +786,8 @@ class BackendIMAP extends BackendDiff {
             $output = new SyncMail();
 
             $body = $this->getBody($message);
+            $output->bodysize = strlen($body);
+
             // truncate body, if requested
             if(strlen($body) > $truncsize) {
                 $body = utf8_truncate($body, $truncsize);
@@ -792,9 +798,8 @@ class BackendIMAP extends BackendDiff {
             }
             $body = str_replace("\n","\r\n", str_replace("\r","",$body));
 
-            $output->bodysize = strlen($body);
             $output->body = $body;
-            $output->datereceived = isset($message->headers["date"]) ? strtotime($message->headers["date"]) : null;
+            $output->datereceived = isset($message->headers["date"]) ? $this->cleanupDate($message->headers["date"]) : null;
             $output->displayto = isset($message->headers["to"]) ? $message->headers["to"] : null;
             $output->importance = isset($message->headers["x-priority"]) ? preg_replace("/\D+/", "", $message->headers["x-priority"]) : null;
             $output->messageclass = "IPM.Note";
@@ -806,10 +811,19 @@ class BackendIMAP extends BackendDiff {
             $output->reply_to = isset($message->headers["reply-to"]) ? $message->headers["reply-to"] : null;
 
             // Attachments are only searched in the top-level part
-            $n = 0;
             if(isset($message->parts)) {
-                foreach($message->parts as $part) {
-                    if(isset($part->disposition) && ($part->disposition == "attachment" || $part->disposition == "inline")) {
+                $mparts = $message->parts;
+                for ($i=0; $i<count($mparts); $i++) {
+                    $part = $mparts[$i];
+                    //recursively add parts
+                    if($part->ctype_primary == "multipart" && ($part->ctype_secondary == "mixed" || $part->ctype_secondary == "alternative"  || $part->ctype_secondary == "related")) {
+                        foreach($part->parts as $spart)
+                            $mparts[] = $spart;
+                        continue;
+                    }
+                    //add part as attachment if it's disposition indicates so or if it is not a text part
+                    if ((isset($part->disposition) && ($part->disposition == "attachment" || $part->disposition == "inline")) ||
+                        (isset($part->ctype_primary) && $part->ctype_primary != "text")) {
                         $attachment = new SyncAttachment();
 
                         if (isset($part->body))
@@ -824,12 +838,12 @@ class BackendIMAP extends BackendDiff {
                         else $attname = "unknown attachment";
 
                         $attachment->displayname = $attname;
-                        $attachment->attname = $folderid . ":" . $id . ":" . $n;
+                        $attachment->attname = $folderid . ":" . $id . ":" . $i;
                         $attachment->attmethod = 1;
                         $attachment->attoid = isset($part->headers['content-id']) ? $part->headers['content-id'] : "";
                         array_push($output->attachments, $attachment);
                     }
-                    $n++;
+
                 }
             }
             // unset mimedecoder & mail
@@ -1123,6 +1137,18 @@ class BackendIMAP extends BackendDiff {
         $parent = imap_list($this->_mbox, $this->_server, $folderName);
         if ($parent === false) return false;
         return true;
+    }
+
+    //if received date has parenthesis (comments) strtotime will return false
+    //the function removes them from the date string
+    function cleanupDate($receiveddate) {
+        $receiveddate = strtotime(preg_replace("/\(.*\)/", "", $receiveddate));
+        if ($receiveddate == false || $receiveddate == -1) {
+            debugLog("Received date is false. Message might be broken.");
+            return null;
+        }
+
+        return $receiveddate;
     }
 
 }

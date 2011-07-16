@@ -1656,12 +1656,6 @@ function HandleSearch($backend, $devid, $protocolversion) {
                                     $encoder->endTag();
                                 }
 
-                                if (isset($u[SYNC_GAL_ALIAS])) {
-                                    $encoder->startTag(SYNC_GAL_ALIAS);
-                                    $encoder->content($u[SYNC_GAL_ALIAS]);
-                                    $encoder->endTag();
-                                }
-
                                 if (isset($u[SYNC_GAL_OFFICE])) {
                                     $encoder->startTag(SYNC_GAL_OFFICE);
                                     $encoder->content($u[SYNC_GAL_OFFICE]);
@@ -1680,15 +1674,9 @@ function HandleSearch($backend, $devid, $protocolversion) {
                                     $encoder->endTag();
                                 }
 
-                                if (isset($u[SYNC_GAL_HOMEPHONE])) {
-                                    $encoder->startTag(SYNC_GAL_HOMEPHONE);
-                                    $encoder->content($u[SYNC_GAL_HOMEPHONE]);
-                                    $encoder->endTag();
-                                }
-
-                                if (isset($u[SYNC_GAL_MOBILEPHONE])) {
-                                    $encoder->startTag(SYNC_GAL_MOBILEPHONE);
-                                    $encoder->content($u[SYNC_GAL_MOBILEPHONE]);
+                                if (isset($u[SYNC_GAL_ALIAS])) {
+                                    $encoder->startTag(SYNC_GAL_ALIAS);
+                                    $encoder->content($u[SYNC_GAL_ALIAS]);
                                     $encoder->endTag();
                                 }
 
@@ -1700,6 +1688,18 @@ function HandleSearch($backend, $devid, $protocolversion) {
                                 $encoder->startTag(SYNC_GAL_LASTNAME);
                                 $encoder->content((isset($u[SYNC_GAL_LASTNAME]))?$u[SYNC_GAL_LASTNAME]:"No name");
                                 $encoder->endTag();
+
+                                if (isset($u[SYNC_GAL_HOMEPHONE])) {
+                                    $encoder->startTag(SYNC_GAL_HOMEPHONE);
+                                    $encoder->content($u[SYNC_GAL_HOMEPHONE]);
+                                    $encoder->endTag();
+                                }
+
+                                if (isset($u[SYNC_GAL_MOBILEPHONE])) {
+                                    $encoder->startTag(SYNC_GAL_MOBILEPHONE);
+                                    $encoder->content($u[SYNC_GAL_MOBILEPHONE]);
+                                    $encoder->endTag();
+                                }
 
                                 $encoder->startTag(SYNC_GAL_EMAILADDRESS);
                                 $encoder->content((isset($u[SYNC_GAL_EMAILADDRESS]))?$u[SYNC_GAL_EMAILADDRESS]:"");

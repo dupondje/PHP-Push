@@ -69,6 +69,20 @@ if (!function_exists("array_change_key_case")) {
     }
 }
 
+
+if (!function_exists("quoted_printable_encode")) {
+  /**
+  * Process a string to fit the requirements of RFC2045 section 6.7. Note that
+  * this works, but replaces more characters than the minimum set. For readability
+  * the spaces and CRLF pairs aren't encoded though.
+  *
+  * @see http://www.php.net/manual/en/function.quoted-printable-decode.php#89417
+  */
+    function quoted_printable_encode($string) {
+        return preg_replace('/[^\r\n]{73}[^=\r\n]{2}/', "$0=\n", str_replace(array('%20', '%0D%0A', '%'), array(' ', "\r\n", '='), rawurlencode($string)));
+    }
+}
+
 // iPhone defines standard summer time information for current year only,
 // starting with time change in February. Dates from the 1st January until
 // the time change are undefined and the server uses GMT or its current time.
@@ -91,5 +105,4 @@ function icalTimezoneFix($ical) {
 
     return $ical;
 }
-
 ?>

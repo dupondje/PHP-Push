@@ -558,6 +558,8 @@ class ExportChangesDiff extends DiffState {
                 return 512;
             case SYNC_TRUNCATION_1K:
                 return 1024;
+            case SYNC_TRUNCATION_2K:
+                return 2*1024;
             case SYNC_TRUNCATION_5K:
                 return 5*1024;
             case SYNC_TRUNCATION_SEVEN:
@@ -671,6 +673,8 @@ class BackendDiff {
                 return 512;
             case SYNC_TRUNCATION_1K:
                 return 1024;
+            case SYNC_TRUNCATION_2K:
+                return 2*1024;
             case SYNC_TRUNCATION_5K:
                 return 5*1024;
             case SYNC_TRUNCATION_ALL:
