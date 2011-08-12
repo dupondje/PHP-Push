@@ -1577,7 +1577,7 @@ class vcalendar {
   {
     $nl = $this->getConfig( 'nl' );
             /* identify BEGIN:VCALENDAR, MUST be first row */
-    if( 'BEGIN:VCALENDAR' != strtoupper( substr( $rows[0], 0, 15 )))
+    if( 'BEGIN:VCALENDAR' != strtoupper( substr( $rows, 0, 15 )))
       return FALSE;                   /* err 8 */
             /* fix line folding */
     $eolchars = array( "\r\n", "\n\r", "\n", "\r" ); // check all line endings
