@@ -215,9 +215,8 @@ class BackendCalDav extends BackendDiff {
     function isevent($href) {
         $stat = $this->wdc->get($href, $output); 
         if ($stat == 200) { 
-            $rows = explode("\n", $output);
             $v = new vcalendar();
-            $v->runparse($rows);
+            $v->runparse($output);
             $v->sort();
             
             if ($vevent = $v->getComponent('vevent')) {
@@ -244,9 +243,8 @@ class BackendCalDav extends BackendDiff {
         $stat = $this->wdc->get($this->_path.$id, $output); 
         if ($stat == 200) {
             //debugLog("CalDAV::Got File ".$id." now parseing ".$output);
-            $rows = explode("\n", $output);
             $v = new vcalendar();
-            $v->runparse($rows);
+            $v->runparse($output);
             $v->sort();
                         
         	if ($folderid == "tasks") {
