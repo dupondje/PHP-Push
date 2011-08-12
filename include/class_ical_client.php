@@ -49,10 +49,10 @@ if ($pos   !== false) {
 /*         since 2.6.36 - 2010-12-31 */
 if( substr( phpversion(), 0, 3 ) >= '5.1' )
   // && ( 'UTC' == date_default_timezone_get()))
-  date_default_timezone_set( 'Europe/Stockholm' );
+  date_default_timezone_set( 'Europe/Brussels' );
 /*********************************************************************************/
 /*         since 2.6.22 - 2010-09-25, do NOT remove!!                            */
-require_once 'iCalUtilityFunctions.class.php';
+require_once 'class_ical_utilityfunctions.php';
 /*********************************************************************************/
 /*         version, do NOT remove!!                                              */
 define( 'ICALCREATOR_VERSION', 'iCalcreator 2.10.5' );
