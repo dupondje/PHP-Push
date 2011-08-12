@@ -1,6 +1,6 @@
 <?php
 /**
- * iCalcreator class v2.8
+ * iCalcreator class v2.10.5
  * copyright (c) 2007-2011 Kjell-Inge Gustafsson kigkonsult
  * www.kigkonsult.se/iCalcreator/index.php
  * ical@kigkonsult.se
@@ -22,8 +22,8 @@
 /**
  * moving all utility (static) functions to a utility class
  *
- * @author Kjell-Inge Gustafsson <ical@kigkonsult.se>
- * @since 2.6.22 - 2010-09-25
+ * @author Kjell-Inge Gustafsson, kigkonsult <ical@kigkonsult.se>
+ * @since 2.10.1 - 2011-07-16
  *
  */
 class iCalUtilityFunctions {
@@ -45,7 +45,7 @@ class iCalUtilityFunctions {
 /**
  * check a date(-time) for an opt. timezone and if it is a DATE-TIME or DATE
  *
- * @author Kjell-Inge Gustafsson <ical@kigkonsult.se>
+ * @author Kjell-Inge Gustafsson, kigkonsult <ical@kigkonsult.se>
  * @since 2.4.16 - 2008-10-25
  * @param array $date, date to check
  * @param int $parno, no of date parts (i.e. year, month.. .)
@@ -96,9 +96,98 @@ class iCalUtilityFunctions {
     }
   }
 /**
+ * create (very simple) timezone and standard/daylight components
+ *
+ * Result when 'Europe/Stockholm' is used as timezone:
+ *
+ * BEGIN:VTIMEZONE
+ * TZID:Europe/Stockholm
+ * BEGIN:STANDARD
+ * DTSTART:20101031T020000
+ * TZOFFSETFROM:+0200
+ * TZOFFSETTO:+0100
+ * RRULE:FREQ=YEARLY;BYDAY=-1SU;BYMONTH=10
+ * TZNAME:CET
+ * END:STANDARD
+ * BEGIN:DAYLIGHT
+ * DTSTART:20100328T030000
+ * TZOFFSETFROM:+0100
+ * TZOFFSETTO:+0200
+ * RRULE:FREQ=YEARLY;BYDAY=-1SU;BYMONTH=3
+ * TZNAME:CEST
+ * END:DAYLIGHT
+ * END:VTIMEZONE
+ *
+ * @author Kjell-Inge Gustafsson, kigkonsult <ical@kigkonsult.se>
+ * @since 2.10.3 - 2011-08-01
+ * @param object $calendar, reference to an iCalcreator calendar instance
+ * @param string $timezone, a PHP5 (DateTimeZone) valid timezone
+ * @param array $xProp, *[x-propName => x-propValue], optional
+ * @return bool
+ */
+  public static function createTimezone( & $calendar, $timezone, $xProp=array() ) {
+    if( !class_exists( 'DateTimeZone' ))
+      return FALSE;
+    if( empty( $timezone ))
+      return FALSE;
+    try {
+      $dtz = new DateTimeZone( $timezone );
+    }
+    catch( Exception $e ) {
+      return FALSE;
+    }
+    $stdDTSTART  = $stdTZOFFSETTO = $stdTZOFFSETFROM = $stdTZNAME = $dlghtDTSTART = $dlghtTZOFFSETTO = $dlghtTZOFFSETFROM = $dlghtTZNAME = FALSE;
+    $dateNow     = new DateTime();
+    $transitions = $dtz->getTransitions();
+    foreach( $transitions as $trans ) {
+      if( FALSE === ( $date = DateTime::createFromFormat( 'Y-m-d', substr( $trans['time'], 0, 10 ))))
+        continue;
+      if( $date > $dateNow )
+        break;
+      if( TRUE !== $trans['isdst'] ) {
+        $stdDTSTART    = $trans['time'];
+        $stdTZOFFSETTO = $dlghtTZOFFSETFROM = iCalUtilityFunctions::offsetSec2His( $trans['offset'] );
+        $stdTZNAME     = $trans['abbr'];
+      }
+      else {
+        $dlghtDTSTART    = $trans['time'];
+        $dlghtTZOFFSETTO = $stdTZOFFSETFROM = iCalUtilityFunctions::offsetSec2His( $trans['offset'] );
+        $dlghtTZNAME     = $trans['abbr'];
+      }
+    }
+    if( !$stdDTSTART || !$stdTZOFFSETTO || !$stdTZOFFSETFROM )
+      return FALSE;
+    $tz  = & $calendar->newComponent( 'vtimezone' );
+    $tz->setproperty( 'tzid', $timezone );
+    if( !empty( $xProp )) {
+      foreach( $xProp as $xPropName => $xPropValue )
+        if( 'x-' == strtolower( substr( $xPropName, 0, 2 )))
+          $tz->setproperty( $xPropName, $xPropValue );
+    }
+    $std = & $tz->newComponent( 'standard' );
+    $std->setProperty( 'dtstart',        $stdDTSTART );
+    if( $stdTZNAME )
+      $std->setProperty( 'tzname',       $stdTZNAME );
+    $std->setProperty( 'tzoffsetto',     $stdTZOFFSETTO );
+    $std->setProperty( 'tzoffsetfrom',   $stdTZOFFSETFROM );
+    if(( $stdTZOFFSETTO != $stdTZOFFSETFROM  ) && ( FALSE === iCalUtilityFunctions::_setTZrrule( $std )))
+      $std->setProperty( 'RRULE', array( 'FREQ' => 'YEARLY', 'BYDAY' => array( '-1', 'DAY' => 'SU' ), 'BYMONTH' => 10 ));
+    if(( !$dlghtDTSTART || !$dlghtTZOFFSETTO || !$dlghtTZOFFSETFROM ) || ( $dlghtTZOFFSETTO == $dlghtTZOFFSETFROM ))
+      return TRUE;
+    $dlght = & $tz->newComponent( 'daylight' );
+    $dlght->setProperty( 'dtstart',      $dlghtDTSTART );
+    if( $dlghtTZNAME )
+      $dlght->setProperty( 'tzname',     $dlghtTZNAME );
+    $dlght->setProperty( 'tzoffsetto',   $dlghtTZOFFSETTO );
+    $dlght->setProperty( 'tzoffsetfrom', $dlghtTZOFFSETFROM );
+    if( FALSE === iCalUtilityFunctions::_setTZrrule( $dlght ))
+      $dlght->setProperty( 'RRULE', array( 'FREQ' => 'YEARLY', 'BYDAY' => array( '-1', 'DAY' => 'SU' ), 'BYMONTH' => 3 ));
+    return TRUE;
+  }
+/**
  * convert date/datetime to timestamp
  *
- * @author Kjell-Inge Gustafsson <ical@kigkonsult.se>
+ * @author Kjell-Inge Gustafsson, kigkonsult <ical@kigkonsult.se>
  * @since 2.4.8 - 2008-10-30
  * @param array  $datetime  datetime/(date)
  * @param string $tz        timezone
@@ -122,7 +211,7 @@ class iCalUtilityFunctions {
 /**
  * ensures internal date-time/date format for input date-time/date in array format
  *
- * @author Kjell-Inge Gustafsson <ical@kigkonsult.se>
+ * @author Kjell-Inge Gustafsson, kigkonsult <ical@kigkonsult.se>
  * @since 0.3.0 - 2006-08-15
  * @param array $datetime
  * @param int $parno optional, default FALSE
@@ -161,7 +250,7 @@ class iCalUtilityFunctions {
 /**
  * ensures internal date-time/date format for input date-time/date in string fromat
  *
- * @author Kjell-Inge Gustafsson <ical@kigkonsult.se>
+ * @author Kjell-Inge Gustafsson, kigkonsult <ical@kigkonsult.se>
  * @since 2.6.35 - 2010-12-03
  * @param array $datetime
  * @param int $parno optional, default FALSE
@@ -257,13 +346,13 @@ class iCalUtilityFunctions {
  *
  * uses this component dates if missing input dates
  *
- * @author Kjell-Inge Gustafsson <ical@kigkonsult.se>
+ * @author Kjell-Inge Gustafsson, kigkonsult <ical@kigkonsult.se>
  * @since 2.6.11 - 2010-10-21
  * @param array $startdate
  * @param array $duration
  * @return array duration
  */
-  function _date2duration( $startdate, $enddate ) {
+  public static function _date2duration( $startdate, $enddate ) {
     $startWdate  = mktime( 0, 0, 0, $startdate['month'], $startdate['day'], $startdate['year'] );
     $endWdate    = mktime( 0, 0, 0, $enddate['month'],   $enddate['day'],   $enddate['year'] );
     $wduration   = $endWdate - $startWdate;
@@ -281,7 +370,7 @@ class iCalUtilityFunctions {
 /**
  * ensures internal duration format for input in array format
  *
- * @author Kjell-Inge Gustafsson <ical@kigkonsult.se>
+ * @author Kjell-Inge Gustafsson, kigkonsult <ical@kigkonsult.se>
  * @since 2.1.1 - 2007-06-24
  * @param array $duration
  * @return array
@@ -333,7 +422,7 @@ class iCalUtilityFunctions {
 /**
  * ensures internal duration format for input in string format
  *
- * @author Kjell-Inge Gustafsson <ical@kigkonsult.se>
+ * @author Kjell-Inge Gustafsson, kigkonsult <ical@kigkonsult.se>
  * @since 2.0.5 - 2007-03-14
  * @param string $duration
  * @return array
@@ -375,7 +464,7 @@ class iCalUtilityFunctions {
          break;
        default:
          if( !ctype_digit( substr( $duration, $ix, 1 )))
-           return false; // unknown duration controll character  !?!?
+           return false; // unknown duration control character  !?!?
          else
            $val .= substr( $duration, $ix, 1 );
       }
@@ -385,13 +474,13 @@ class iCalUtilityFunctions {
 /**
  * convert duration to date in array format
  *
- * @author Kjell-Inge Gustafsson <ical@kigkonsult.se>
- * @since 2.6.23 - 2010-10-23
+ * @author Kjell-Inge Gustafsson, kigkonsult <ical@kigkonsult.se>
+ * @since 2.8.7 - 2011-03-03
  * @param array $startdate
  * @param array $duration
  * @return array, date format
  */
-  function _duration2date( $startdate=null, $duration=null ) {
+  public static function _duration2date( $startdate=null, $duration=null ) {
     if( empty( $startdate )) return FALSE;
     if( empty( $duration ))  return FALSE;
     $dateOnly          = ( isset( $startdate['hour'] ) || isset( $startdate['min'] ) || isset( $startdate['sec'] )) ? FALSE : TRUE;
@@ -409,9 +498,7 @@ class iCalUtilityFunctions {
       $dtend += ( $duration['min'] * 60 );
     if(    isset( $duration['sec'] ))
       $dtend +=   $duration['sec'];
-    if(( 24 * 60 * 60 ) < $dtend )
-      $dtend -= ( 24 * 60 * 60 ); // exclude start day
-    $dtend += mktime( $startdate['hour'], $startdate['min'], $startdate['sec'], $startdate['month'], $startdate['day'], $startdate['year'] );
+    $dtend  = mktime( $startdate['hour'], $startdate['min'], ( $startdate['sec'] + $dtend ), $startdate['month'], $startdate['day'], $startdate['year'] );
     $dtend2 = array();
     $dtend2['year']   = date('Y', $dtend );
     $dtend2['month']  = date('m', $dtend );
@@ -428,7 +515,7 @@ class iCalUtilityFunctions {
 /**
  * if not preSet, if exist, remove key with expected value from array and return hit value else return elseValue
  *
- * @author Kjell-Inge Gustafsson <ical@kigkonsult.se>
+ * @author Kjell-Inge Gustafsson, kigkonsult <ical@kigkonsult.se>
  * @since 2.4.16 - 2008-11-08
  * @param array $array
  * @param string $expkey, expected key
@@ -456,7 +543,7 @@ class iCalUtilityFunctions {
 /**
  * creates formatted output for calendar component property data value type date/date-time
  *
- * @author Kjell-Inge Gustafsson <ical@kigkonsult.se>
+ * @author Kjell-Inge Gustafsson, kigkonsult <ical@kigkonsult.se>
  * @since 2.4.8 - 2008-10-30
  * @param array   $datetime
  * @param int     $parno, optional, default 6
@@ -509,8 +596,8 @@ class iCalUtilityFunctions {
 /**
  * creates formatted output for calendar component property data value type duration
  *
- * @author Kjell-Inge Gustafsson <ical@kigkonsult.se>
- * @since 2.6.10 - 2010-11-28
+ * @author Kjell-Inge Gustafsson, kigkonsult <ical@kigkonsult.se>
+ * @since 2.9.9 - 2011-06-17
  * @param array $duration ( week, day, hour, min, sec )
  * @return string
  */
@@ -535,12 +622,14 @@ class iCalUtilityFunctions {
     $output .= ( isset( $duration['hour']) && ( 0 < $duration['hour'] )) ? $duration['hour'].'H' : '';
     $output .= ( isset( $duration['min'])  && ( 0 < $duration['min'] ))  ? $duration['min']. 'M' : '';
     $output .= ( isset( $duration['sec'])  && ( 0 < $duration['sec'] ))  ? $duration['sec']. 'S' : '';
+    if( 'P' == $output )
+      $output = 'PT0S';
     return $output;
   }
 /**
  * checks if input array contains a date
  *
- * @author Kjell-Inge Gustafsson <ical@kigkonsult.se>
+ * @author Kjell-Inge Gustafsson, kigkonsult <ical@kigkonsult.se>
  * @since 2.4.16 - 2008-10-25
  * @param array $input
  * @return bool
@@ -569,7 +658,7 @@ class iCalUtilityFunctions {
 /**
  * checks if input array contains a timestamp date
  *
- * @author Kjell-Inge Gustafsson <ical@kigkonsult.se>
+ * @author Kjell-Inge Gustafsson, kigkonsult <ical@kigkonsult.se>
  * @since 2.4.16 - 2008-10-18
  * @param array $input
  * @return bool
@@ -580,7 +669,7 @@ class iCalUtilityFunctions {
 /**
  * controll if input string contains trailing UTC offset
  *
- * @author Kjell-Inge Gustafsson <ical@kigkonsult.se>
+ * @author Kjell-Inge Gustafsson, kigkonsult <ical@kigkonsult.se>
  * @since 2.4.16 - 2008-10-19
  * @param string $input
  * @return bool
@@ -601,12 +690,49 @@ class iCalUtilityFunctions {
 
   }
 /**
+ * transform offset in seconds to [-/+]hhmm[ss]
+ *
+ * @author Kjell-Inge Gustafsson, kigkonsult <ical@kigkonsult.se>
+ * @since 2011-05-02
+ * @param string $seconds
+ * @return string
+ */
+  public static function offsetSec2His( $seconds ) {
+    if( '-' == substr( $seconds, 0, 1 )) {
+      $prefix  = '-';
+      $seconds = substr( $seconds, 1 );
+    }
+    elseif( '+' == substr( $seconds, 0, 1 )) {
+      $prefix  = '+';
+      $seconds = substr( $seconds, 1 );
+    }
+    else
+      $prefix  = '+';
+    $output  = '';
+    $hour    = (int) floor( $seconds / 3600 );
+    if( 10 > $hour )
+      $hour  = '0'.$hour;
+    $seconds = $seconds % 3600;
+    $min     = (int) floor( $seconds / 60 );
+    if( 10 > $min )
+      $min   = '0'.$min;
+    $output  = $hour.$min;
+    $seconds = $seconds % 60;
+    if( 0 < $seconds) {
+      if( 9 < $seconds)
+        $output .= $seconds;
+      else
+        $output .= '0'.$seconds;
+    }
+    return $prefix.$output;
+  }
+/**
  * remakes a recur pattern to an array of dates
  *
  * if missing, UNTIL is set 1 year from startdate (emergency break)
  *
- * @author Kjell-Inge Gustafsson <ical@kigkonsult.se>
- * @since 2.4.23 - 2010-10-24
+ * @author Kjell-Inge Gustafsson, kigkonsult <ical@kigkonsult.se>
+ * @since 2.9.10 - 2011-07-07
  * @param array $result, array to update, array([timestamp] => timestamp)
  * @param array $recur, pattern for recurrency (only value part, params ignored)
  * @param array $wdate, component start date
@@ -617,13 +743,14 @@ class iCalUtilityFunctions {
  */
   public static function _recur2date( & $result, $recur, $wdate, $startdate, $enddate=FALSE ) {
     foreach( $wdate as $k => $v ) if( ctype_digit( $v )) $wdate[$k] = (int) $v;
+    $wdateStart  = $wdate;
     $wdatets     = iCalUtilityFunctions::_date2timestamp( $wdate );
     $startdatets = iCalUtilityFunctions::_date2timestamp( $startdate );
     if( !$enddate ) {
       $enddate = $startdate;
       $enddate['year'] += 1;
-// echo "recur __in_ ".implode('-',$startdate)." period start ".implode('-',$wdate)." period end ".implode('-',$enddate)."<br />\n";print_r($recur);echo "<br />\n";//test###
     }
+// echo "recur __in_ comp start ".implode('-',$wdate)." period start ".implode('-',$startdate)." period end ".implode('-',$enddate)."<br />\n";print_r($recur);echo "<br />\n";//test###
     $endDatets = iCalUtilityFunctions::_date2timestamp( $enddate ); // fix break
     if( !isset( $recur['COUNT'] ) && !isset( $recur['UNTIL'] ))
       $recur['UNTIL'] = $enddate; // create break
@@ -637,12 +764,13 @@ class iCalUtilityFunctions {
         $recur['UNTIL'] = iCalUtilityFunctions::_timestamp2date( $endDatets, 6 );
     }
     if( $wdatets > $endDatets ) {
-     //echo "recur out of date ".implode('-',iCalUtilityFunctions::_date_time_string(date('Y-m-d H:i:s',$wdatets),6))."<br />\n";//test
+// echo "recur out of date ".implode('-',iCalUtilityFunctions::_date_time_string(date('Y-m-d H:i:s',$wdatets),6))."<br />\n";//test
       return array(); // nothing to do.. .
     }
     if( !isset( $recur['FREQ'] )) // "MUST be specified.. ."
       $recur['FREQ'] = 'DAILY'; // ??
     $wkst = ( isset( $recur['WKST'] ) && ( 'SU' == $recur['WKST'] )) ? 24*60*60 : 0; // ??
+    $weekStart = (int) date( 'W', ( $wdatets + $wkst ));
     if( !isset( $recur['INTERVAL'] ))
       $recur['INTERVAL'] = 1;
     $countcnt = ( !isset( $recur['BYSETPOS'] )) ? 1 : 0; // DTSTART counts as the first occurrence
@@ -669,23 +797,37 @@ class iCalUtilityFunctions {
     }
     if( isset( $recur['BYSETPOS'] )) { // save start date + weekno
       $bysetposymd1 = $bysetposymd2 = $bysetposw1 = $bysetposw2 = array();
-      $bysetposWold = (int) date( 'W', ( $wdatets + $wkst ));
-      $bysetposYold = $wdate['year'];
-      $bysetposMold = $wdate['month'];
-      $bysetposDold = $wdate['day'];
+// echo "bysetposXold_start=$bysetposYold $bysetposMold $bysetposDold<br />\n"; // test ###
       if( is_array( $recur['BYSETPOS'] )) {
         foreach( $recur['BYSETPOS'] as $bix => $bval )
           $recur['BYSETPOS'][$bix] = (int) $bval;
       }
       else
         $recur['BYSETPOS'] = array( (int) $recur['BYSETPOS'] );
-      iCalUtilityFunctions::_stepdate( $enddate, $endDatets, $step); // make sure to count whole last period
+      if( 'YEARLY' == $recur['FREQ'] ) {
+        $wdate['month'] = $wdate['day'] = 1; // start from beginning of year
+        $wdatets        = iCalUtilityFunctions::_date2timestamp( $wdate );
+        iCalUtilityFunctions::_stepdate( $enddate, $endDatets, array( 'year' => 1 )); // make sure to count whole last year
+      }
+      elseif( 'MONTHLY' == $recur['FREQ'] ) {
+        $wdate['day']   = 1; // start from beginning of month
+        $wdatets        = iCalUtilityFunctions::_date2timestamp( $wdate );
+        iCalUtilityFunctions::_stepdate( $enddate, $endDatets, array( 'month' => 1 )); // make sure to count whole last month
+      }
+      else
+        iCalUtilityFunctions::_stepdate( $enddate, $endDatets, $step); // make sure to count whole last period
+// echo "BYSETPOS endDat++ =".implode('-',$enddate).' step='.var_export($step,TRUE)."<br />\n";//test###
+      $bysetposWold = (int) date( 'W', ( $wdatets + $wkst ));
+      $bysetposYold = $wdate['year'];
+      $bysetposMold = $wdate['month'];
+      $bysetposDold = $wdate['day'];
     }
-    iCalUtilityFunctions::_stepdate( $wdate, $wdatets, $step);
+    else
+      iCalUtilityFunctions::_stepdate( $wdate, $wdatets, $step);
     $year_old     = null;
     $daynames     = array( 'SU', 'MO', 'TU', 'WE', 'TH', 'FR', 'SA' );
              /* MAIN LOOP */
-     // echo "recur start ".implode('-',$wdate)." end ".implode('-',$enddate)."<br />\n";//test
+// echo "recur start ".implode('-',$wdate)." end ".implode('-',$enddate)."<br />\n";//test
     while( TRUE ) {
       if( isset( $endDatets ) && ( $wdatets > $endDatets ))
         break;
@@ -773,13 +915,13 @@ class iCalUtilityFunctions {
         if(( $recur['INTERVAL'] != $intervalarr[$intervalix] ) &&
            ( 0 != $intervalarr[$intervalix] )) {
             /* step up date */
-    //echo "skip: ".implode('-',$wdate)." ix=$intervalix old=$currentKey interval=".$intervalarr[$intervalix]."<br />\n";//test
+// echo "skip: ".implode('-',$wdate)." ix=$intervalix old=$currentKey interval=".$intervalarr[$intervalix]."<br />\n";//test
           iCalUtilityFunctions::_stepdate( $wdate, $wdatets, $step);
           continue;
         }
         else // continue within the selected interval
           $intervalarr[$intervalix] = 0;
-   //echo "cont: ".implode('-',$wdate)." ix=$intervalix old=$currentKey interval=".$intervalarr[$intervalix]."<br />\n";//test
+// echo "cont: ".implode('-',$wdate)." ix=$intervalix old=$currentKey interval=".$intervalarr[$intervalix]."<br />\n";//test
       }
       $updateOK = TRUE;
       if( $updateOK && isset( $recur['BYMONTH'] ))
@@ -798,7 +940,7 @@ class iCalUtilityFunctions {
         $updateOK = iCalUtilityFunctions::_recurBYcntcheck( $recur['BYMONTHDAY']
                                            , $wdate['day']
                                            , $daycnts[$wdate['month']][$wdate['day']]['monthcnt_down'] );
-    //echo "efter BYMONTHDAY: ".implode('-',$wdate).' status: '; echo ($updateOK) ? 'TRUE' : 'FALSE'; echo "<br />\n";//test###
+// echo "efter BYMONTHDAY: ".implode('-',$wdate).' status: '; echo ($updateOK) ? 'TRUE' : 'FALSE'; echo "<br />\n";//test###
       if( $updateOK && isset( $recur['BYDAY'] )) {
         $updateOK = FALSE;
         $m = $wdate['month'];
@@ -822,7 +964,7 @@ class iCalUtilityFunctions {
              ( !$daynoexists && !$daynosw && $daynamesw )) {
             $updateOK = TRUE;
           }
-        //echo "daynoexists:$daynoexists daynosw:$daynosw daynamesw:$daynamesw<br />\n"; // test ###
+// echo "daynoexists:$daynoexists daynosw:$daynosw daynamesw:$daynamesw<br />\n"; // test ###
         }
         else {
           foreach( $recur['BYDAY'] as $bydayvalue ) {
@@ -842,7 +984,7 @@ class iCalUtilityFunctions {
                                                   , $daycnts[$m][$d]['yeardayno_up']
                                                   , $daycnts[$m][$d]['yeardayno_down'] );
             }
-        //echo "daynoexists:$daynoexists daynosw:$daynosw daynamesw:$daynamesw<br />\n"; // test ###
+// echo "daynoexists:$daynoexists daynosw:$daynosw daynamesw:$daynamesw<br />\n"; // test ###
             if((  $daynoexists &&  $daynosw && $daynamesw ) ||
                ( !$daynoexists && !$daynosw && $daynamesw )) {
               $updateOK = TRUE;
@@ -851,7 +993,7 @@ class iCalUtilityFunctions {
           }
         }
       }
-      //echo "efter BYDAY: ".implode('-',$wdate).' status: '; echo ($updateOK) ? 'TRUE' : 'FALSE'; echo "<br />\n"; // test ###
+// echo "efter BYDAY: ".implode('-',$wdate).' status: '; echo ($updateOK) ? 'TRUE' : 'FALSE'; echo "<br />\n"; // test ###
             /* check BYSETPOS */
       if( $updateOK ) {
         if( isset( $recur['BYSETPOS'] ) &&
@@ -871,10 +1013,14 @@ class iCalUtilityFunctions {
                ( isset( $recur['FREQ'] ) && ( 'DAILY'       == $recur['FREQ'] )  &&
                                            (( $bysetposYold == $wdate['year'] )  &&
                                             ( $bysetposMold == $wdate['month'])  &&
-                                            ( $bysetposDold == $wdate['day'] ))))
+                                            ( $bysetposDold == $wdate['day'] )))) {
+// echo "bysetposymd1[]=".implode('-',iCalUtilityFunctions::_date_time_string(date('Y-m-d H:i:s',$wdatets),6))."<br />\n";//test
               $bysetposymd1[] = $wdatets;
-            else
+            }
+            else {
+// echo "bysetposymd2[]=".implode('-',iCalUtilityFunctions::_date_time_string(date('Y-m-d H:i:s',$wdatets),6))."<br />\n";//test
               $bysetposymd2[] = $wdatets;
+            }
           }
         }
         else {
@@ -882,9 +1028,9 @@ class iCalUtilityFunctions {
           $countcnt++;
           if( $startdatets <= $wdatets ) { // only output within period
             $result[$wdatets] = TRUE;
-          //echo "recur ".implode('-',iCalUtilityFunctions::_date_time_string(date('Y-m-d H:i:s',$wdatets),6))."<br />\n";//test
+// echo "recur ".implode('-',iCalUtilityFunctions::_date_time_string(date('Y-m-d H:i:s',$wdatets),6))."<br />\n";//test
           }
-         //else echo "recur undate ".implode('-',iCalUtilityFunctions::_date_time_string(date('Y-m-d H:i:s',$wdatets),6))." okdatstart ".implode('-',iCalUtilityFunctions::_date_time_string(date('Y-m-d H:i:s',$startdatets),6))."<br />\n";//test
+// echo "recur undate ".implode('-',iCalUtilityFunctions::_date_time_string(date('Y-m-d H:i:s',$wdatets),6))." okdatstart ".implode('-',iCalUtilityFunctions::_date_time_string(date('Y-m-d H:i:s',$startdatets),6))."<br />\n";//test
           $updateOK = FALSE;
         }
       }
@@ -929,20 +1075,25 @@ class iCalUtilityFunctions {
             $bysetposarr1 = & $bysetposymd1;
             $bysetposarr2 = & $bysetposymd2;
           }
+// echo 'test före out startYMD (weekno)='.$wdateStart['year'].':'.$wdateStart['month'].':'.$wdateStart['day']." ($weekStart) "; // test ###
           foreach( $recur['BYSETPOS'] as $ix ) {
             if( 0 > $ix ) // both positive and negative BYSETPOS allowed
               $ix = ( count( $bysetposarr1 ) + $ix + 1);
             $ix--;
             if( isset( $bysetposarr1[$ix] )) {
               if( $startdatets <= $bysetposarr1[$ix] ) { // only output within period
+//                $testdate   = iCalUtilityFunctions::_timestamp2date( $bysetposarr1[$ix], 6 );                // test ###
+//                $testweekno = (int) date( 'W', mktime( 0, 0, $wkst, $testdate['month'], $testdate['day'], $testdate['year'] )); // test ###
+// echo " testYMD (weekno)=".$testdate['year'].':'.$testdate['month'].':'.$testdate['day']." ($testweekno)";   // test ###
                 $result[$bysetposarr1[$ix]] = TRUE;
-       //echo "recur ".implode('-',iCalUtilityFunctions::_date_time_string(date('Y-m-d H:i:s',$bysetposarr1[$ix]),6))."<br />\n";//test
+// echo " recur ".implode('-',iCalUtilityFunctions::_date_time_string(date('Y-m-d H:i:s',$bysetposarr1[$ix]),6)); // test ###
               }
               $countcnt++;
             }
             if( isset( $recur['COUNT'] ) && ( $countcnt >= $recur['COUNT'] ))
               break;
           }
+// echo "<br />\n"; // test ###
           $bysetposarr1 = $bysetposarr2;
           $bysetposarr2 = array();
         }
@@ -981,8 +1132,8 @@ class iCalUtilityFunctions {
 /**
  * convert input format for exrule and rrule to internal format
  *
- * @author Kjell-Inge Gustafsson <ical@kigkonsult.se>
- * @since 2.6.23 - 2010-12-07
+ * @author Kjell-Inge Gustafsson, kigkonsult <ical@kigkonsult.se>
+ * @since 2.9.10 - 2011-07-07
  * @param array $rexrule
  * @return array
  */
@@ -1021,8 +1172,27 @@ class iCalUtilityFunctions {
       $input2['BYMINUTE']   = $input['BYMINUTE'];
     if( isset( $input['BYHOUR'] ))
       $input2['BYHOUR']     = $input['BYHOUR'];
-    if( isset( $input['BYDAY'] ))
-      $input2['BYDAY']      = $input['BYDAY'];
+    if( isset( $input['BYDAY'] )) {
+      if( !is_array( $input['BYDAY'] )) // ensure upper case.. .
+        $input2['BYDAY']    = strtoupper( $input['BYDAY'] );
+      else {
+        foreach( $input['BYDAY'] as $BYDAYx => $BYDAYv ) {
+          if( 'DAY'        == strtoupper( $BYDAYx ))
+             $input2['BYDAY']['DAY'] = strtoupper( $BYDAYv );
+          elseif( !is_array( $BYDAYv )) {
+             $input2['BYDAY'][$BYDAYx]  = $BYDAYv;
+          }
+          else {
+            foreach( $BYDAYv as $BYDAYx2 => $BYDAYv2 ) {
+              if( 'DAY'    == strtoupper( $BYDAYx2 ))
+                 $input2['BYDAY'][$BYDAYx]['DAY'] = strtoupper( $BYDAYv2 );
+              else
+                 $input2['BYDAY'][$BYDAYx][$BYDAYx2] = $BYDAYv2;
+            }
+          }
+        }
+      }
+    }
     if( isset( $input['BYMONTHDAY'] ))
       $input2['BYMONTHDAY'] = $input['BYMONTHDAY'];
     if( isset( $input['BYYEARDAY'] ))
@@ -1040,8 +1210,8 @@ class iCalUtilityFunctions {
 /**
  * convert format for input date to internal date with parameters
  *
- * @author Kjell-Inge Gustafsson <ical@kigkonsult.se>
- * @since 2.6.22 - 2010-09-25
+ * @author Kjell-Inge Gustafsson, kigkonsult <ical@kigkonsult.se>
+ * @since 2.10.4 - 2011-08-03
  * @param mixed $year
  * @param mixed $month optional
  * @param int $day optional
@@ -1052,9 +1222,10 @@ class iCalUtilityFunctions {
  * @param array $params optional
  * @param string $caller optional
  * @param string $objName optional
+ * @param string $tzid optional
  * @return array
  */
-  public static function _setDate( $year, $month=FALSE, $day=FALSE, $hour=FALSE, $min=FALSE, $sec=FALSE, $tz=FALSE, $params=FALSE, $caller=null, $objName=null ) {
+  public static function _setDate( $year, $month=FALSE, $day=FALSE, $hour=FALSE, $min=FALSE, $sec=FALSE, $tz=FALSE, $params=FALSE, $caller=null, $objName=null, $tzid=FALSE ) {
     $input = $parno = null;
     $localtime = (( 'dtstart' == $caller ) && in_array( $objName, array( 'vtimezone', 'standard', 'daylight' ))) ? TRUE : FALSE;
     if( iCalUtilityFunctions::_isArrayDate( $year )) {
@@ -1086,6 +1257,15 @@ class iCalUtilityFunctions {
       $input['params'] = iCalUtilityFunctions::_setParams( $month, array( 'VALUE' => 'DATE-TIME' ));
       if( isset( $input['params']['TZID'] )) {
         $input['params']['VALUE'] = 'DATE-TIME';
+        $parno = 6;
+      }
+      elseif( $tzid && iCalUtilityFunctions::_isOffset( substr( $year, -7 ))) {
+        if(( in_array( substr( $year, -5, 1 ), array( '+', '-' ))) &&
+           (   '0000'  < substr( $year, -4 )) && (   '9999' >= substr( $year, -4 )))
+          $year = substr( $year, 0, ( strlen( $year ) - 5 ));
+        elseif(( in_array( substr( $input, -7, 1 ), array( '+', '-' ))) &&
+               ( '000000'  < substr( $input, -6 )) && ( '999999' >= substr( $input, -6 )))
+          $year = substr( $year, 0, ( strlen( $year ) - 7 ));
         $parno = 6;
       }
       $parno           = iCalUtilityFunctions::_existRem( $input['params'], 'VALUE', 'DATE-TIME', 7, $parno );
@@ -1128,7 +1308,10 @@ class iCalUtilityFunctions {
     }
     elseif( isset( $input['params']['TZID'] ))
       unset( $input['value']['tz'] );
-    if( $localtime ) unset( $input['value']['tz'], $input['params']['TZID'] );
+    if( $localtime )
+      unset( $input['value']['tz'], $input['params']['TZID'] );
+    elseif(( !isset( $input['params']['VALUE'] ) || ( $input['params']['VALUE'] != 'DATE' )) && !isset( $input['params']['TZID'] ) && $tzid )
+      $input['params']['TZID'] = $tzid;
     if( isset( $input['value']['tz'] ))
       $input['value']['tz'] = (string) $input['value']['tz'];
     if( !empty( $input['value']['tz'] ) && ( 'Z' != $input['value']['tz'] ) &&
@@ -1139,7 +1322,7 @@ class iCalUtilityFunctions {
 /**
  * convert format for input date (UTC) to internal date with parameters
  *
- * @author Kjell-Inge Gustafsson <ical@kigkonsult.se>
+ * @author Kjell-Inge Gustafsson, kigkonsult <ical@kigkonsult.se>
  * @since 2.4.17 - 2008-10-31
  * @param mixed $year
  * @param mixed $month optional
@@ -1187,7 +1370,7 @@ class iCalUtilityFunctions {
 /**
  * check index and set (an indexed) content in multiple value array
  *
- * @author Kjell-Inge Gustafsson <ical@kigkonsult.se>
+ * @author Kjell-Inge Gustafsson, kigkonsult <ical@kigkonsult.se>
  * @since 2.6.12 - 2011-01-03
  * @param array $valArr
  * @param mixed $value
@@ -1214,7 +1397,7 @@ class iCalUtilityFunctions {
  *
  * default parameters can be set, if missing
  *
- * @author Kjell-Inge Gustafsson <ical@kigkonsult.se>
+ * @author Kjell-Inge Gustafsson, kigkonsult <ical@kigkonsult.se>
  * @since 1.x.x - 2007-05-01
  * @param array $params
  * @param array $defaults
@@ -1247,9 +1430,35 @@ class iCalUtilityFunctions {
     return (0 < count( $input )) ? $input : null;
   }
 /**
+ * set RRULE in vtimezone standard/daylight components based on component dtstart
+ *
+ * @author Kjell-Inge Gustafsson, kigkonsult <ical@kigkonsult.se>
+ * @since 2.10.3 - 2011-08-01
+ * @param object $obj, reference to an iCalcreator vtimezone standard/daylight instance
+ * @return bool
+ */
+  public static function _setTZrrule( & $obj ) {
+    if( FALSE === ( $date = $obj->getProperty( 'dtstart' )))
+      return FALSE;
+    $ts      = mktime( (int) $date['hour'], (int) $date['min'], (int) $date['sec'], (int) $date['month'], (int) $date['day'], (int) $date['year'] );
+    $daysNm  = array( 'SU', 'MO', 'TU', 'WE', 'TH', 'FR', 'SA', 'SU' );
+    $day     = $daysNm[date( 'N', $ts )];
+    $daycnt  = date( 't', $ts ) - $date['day'];
+    if( 8 > $daycnt )
+      $ordwk = -1;
+    elseif( 15 > $daycnt)
+      $ordwk = -2;
+    elseif( 8 > $date['day'] )
+      $ordwk = 1;
+    else
+      $ordwk = 2;
+    $obj->setProperty( 'RRULE', array( 'FREQ' => 'YEARLY', 'BYDAY' => array( (string) $ordwk, 'DAY' => $day ), 'BYMONTH' => (int) $date['month'] ));
+    return TRUE;
+  }
+/**
  * step date, return updated date, array and timpstamp
  *
- * @author Kjell-Inge Gustafsson <ical@kigkonsult.se>
+ * @author Kjell-Inge Gustafsson, kigkonsult <ical@kigkonsult.se>
  * @since 2.4.16 - 2008-10-18
  * @param array $date, date to step
  * @param int $timestamp
@@ -1269,7 +1478,7 @@ class iCalUtilityFunctions {
 /**
  * convert timestamp to date array
  *
- * @author Kjell-Inge Gustafsson <ical@kigkonsult.se>
+ * @author Kjell-Inge Gustafsson, kigkonsult <ical@kigkonsult.se>
  * @since 2.4.16 - 2008-11-01
  * @param mixed $timestamp
  * @param int $parno
@@ -1296,12 +1505,12 @@ class iCalUtilityFunctions {
 /**
  * convert timestamp to duration in array format
  *
- * @author Kjell-Inge Gustafsson <ical@kigkonsult.se>
+ * @author Kjell-Inge Gustafsson, kigkonsult <ical@kigkonsult.se>
  * @since 2.6.23 - 2010-10-23
  * @param int $timestamp
  * @return array, duration format
  */
-  function _timestamp2duration( $timestamp ) {
+  public static function _timestamp2duration( $timestamp ) {
     $dur         = array();
     $dur['week'] = (int) floor( $timestamp / ( 7 * 24 * 60 * 60 ));
     $timestamp   =              $timestamp % ( 7 * 24 * 60 * 60 );
@@ -1314,9 +1523,35 @@ class iCalUtilityFunctions {
     return $dur;
   }
 /**
+ * transforms a dateTime from a timezone to another using PHP DateTime and DateTimeZone class (PHP >= PHP 5.2.0)
+ *
+ * @author Kjell-Inge Gustafsson, kigkonsult <ical@kigkonsult.se>
+ * @since 2.10.5 - 2011-08-03
+ * @param string $date    (date to alter)
+ * @param string $tzFrom, PHP valid old timezone
+ * @param string $tzTo,   PHP valid new timezone, default 'UTC'
+ * @param string $format, (opt) date output format, default 'Ymd\THis'
+ * @return bool
+ */
+  public static function transformDateTime( & $date, $tzFrom, $tzTo='UTC', $format = 'Ymd\THis' ) {
+    if( !class_exists( 'DateTime' ) || !class_exists( 'DateTimeZone' ))
+      return FALSE;
+    if( FALSE === ( $timestamp = strtotime( $date )))
+      return FALSE;
+    try {
+      $d = new DateTime( date( 'Y-m-d H:i:s', $timestamp ), new DateTimeZone( $tzFrom ));
+      $d->setTimezone( new DateTimeZone( $tzTo ));
+    }
+    catch (Exception $e) {
+      return FALSE;
+    }
+    $date = $d->format( $format );
+    return TRUE;
+  }
+/**
  * convert (numeric) local time offset to seconds correcting localtime to GMT
  *
- * @author Kjell-Inge Gustafsson <ical@kigkonsult.se>
+ * @author Kjell-Inge Gustafsson, kigkonsult <ical@kigkonsult.se>
  * @since 2.4.16 - 2008-10-19
  * @param string $offset
  * @return integer
