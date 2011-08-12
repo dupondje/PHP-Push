@@ -1569,6 +1569,12 @@ class vcalendar {
       $rows =  implode( '\n'.$nl, $unparsedtext );
     else
       $rows = & $unparsedtext;
+    return runparse($rows);
+  }
+
+  /* Split up this function as we need this in PHP-Push */
+  function runparse( $rows )
+  {
             /* identify BEGIN:VCALENDAR, MUST be first row */
     if( 'BEGIN:VCALENDAR' != strtoupper( substr( $rows, 0, 15 )))
       return FALSE;                   /* err 8 */
