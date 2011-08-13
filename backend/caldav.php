@@ -1,7 +1,7 @@
 <?php
 
 include_once('diffbackend.php');
-require_once('class_webdav_client.php');
+require_once('class_caldav_client.php');
 require_once('class_ical_client.php');
 
 class BackendCalDav extends BackendDiff {
