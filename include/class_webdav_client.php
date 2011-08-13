@@ -794,14 +794,15 @@ class webdav_client {
  /**	
 	* Public method ls
 	*
-	* Get's directory information from webdav server into flat a array using PROPFIND
+	* Get's directory information from webdav server into flat a array using REPORT
 	*
 	* All filenames are UTF-8 encoded. 
 	* Have a look at _propfind_startElement what keys are used in array returned. 
 	* @param string path
+        * @param filter (to filter out items)
 	* @return array dirinfo, false on error
 	*/
-	function ls($path) {
+	function ls($path, $range = null) {
 
 		if (trim($path) == '') {
 			$this->_error_log('Missing a path in method ls');
@@ -810,18 +811,26 @@ class webdav_client {
 		$this->_path = $this->_translate_uri($path);
 
 		$this->_header_unset();
-		$this->_create_basic_request('PROPFIND');
+		$this->_create_basic_request('REPORT');
 		$this->_header_add('Depth: 1');
 		$this->_header_add('Content-type: text/xml');
-		// create profind xml request...
-		$xml  = "<?xml version=\"1.0\"?>\r\n";
-		$xml .= "<A:propfind xmlns:A=\"DAV:\">\r\n";
-		// shall we get all properties ?
-		$xml .= "    <A:prop>\r\n";
-		$xml .= "    <A:allprop/>\r\n";
-		$xml .= "    </A:prop>\r\n";
-		// or should we better get only wanted props ?
-		$xml .= "</A:propfind>\r\n";
+                $xml =  "<?xml version=\"1.0\" encoding=\"utf-8\" ?>\r\n";
+                $xml .= "<C:calendar-query xmlns:D=\"DAV:\" xmlns:C=\"urn:ietf:params:xml:ns:caldav\">\r\n";
+                $xml .= "  <D:prop>\r\n";
+                $xml .= "    <C:calendar-data/>\r\n";
+                $xml .= "    <D:getetag/>\r\n";
+                $xml .= "  </D:prop>\r\n";
+                if ($range != null)
+                {
+                        $xml .= "  <C:filter>\r\n";
+                        $xml .= "    <C:comp-filter name=\"VCALENDAR\">\r\n";
+                        $xml .= "      <C:comp-filter name=\"VEVENT\">\r\n";
+                        $xml .= "        $range\r\n";
+                        $xml .= "      </C:comp-filter>\r\n";
+                        $xml .= "    </C:comp-filter>\r\n";
+                        $xml .= "  </C:filter>\r\n";
+                }
+                $xml .= "</C:calendar-query>\r\n";
 		$this->_header_add('Content-length: ' . strlen($xml));
 		$this->_send_request();
 		$this->_error_log($xml);
@@ -1597,7 +1606,7 @@ class webdav_client {
     return $fullpath;  
   }
 	
- /**
+        /**
 	* Private method _error_log
 	* 
 	* a simple php error_log wrapper. 
@@ -1606,7 +1615,10 @@ class webdav_client {
 	*/
 	function _error_log($err_string) {
 		if ($this->_debug) {
-			error_log($err_string);
+			@$fp = fopen("/tmp/php-push.log","a");
+			@$date = strftime("%x %X");
+			@fwrite($fp, "$err_string\n");
+			@fclose($fp);
 		}
 	}
 }

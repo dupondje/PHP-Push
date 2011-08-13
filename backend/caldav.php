@@ -94,7 +94,11 @@ class BackendCalDav extends BackendDiff {
 
         $messages = array();
 
-        $this->_dir = $this->wdc->ls($this->_config['CALDAV_PATH']);
+	$begin = date("Ymd\THis\Z", $cutoffdate);
+	$diff = time() - $cutoffdate;
+	$finish = date("Ymd\THis\Z", time() + $diff);
+	$range = "<C:time-range start=\"$begin\" end=\"$finish\"/>";
+	$this->_dir = $this->wdc->ls($this->_config['CALDAV_PATH'], $range);
         if (!$this->_dir)
 		return false;
 

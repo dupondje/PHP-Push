@@ -517,6 +517,7 @@ class ExportChangesDiff extends DiffState {
     // -----------------------------------------------------------------------
 
     function getCutOffDate($restrict) {
+	debugLog("CutOffDate: " . $restrict);
         switch($restrict) {
             case SYNC_FILTERTYPE_1DAY:
                 $back = 60 * 60 * 24;
