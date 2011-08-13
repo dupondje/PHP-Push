@@ -269,10 +269,6 @@ class BackendCalDav extends BackendDiff {
             }           
             debugLog("CalDAV::Finsihed Converting ".$id." now returning");
             return $message;
-        } else {
-            debugLog('CalDAV::Could not retrieve file from server');
-            return;
-        }   
     }
 
     function DeleteMessage($folderid, $id) {
