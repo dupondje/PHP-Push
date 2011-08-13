@@ -9,24 +9,16 @@ class BackendCalDav extends BackendDiff {
     var $_devid;
     var $_protocolversion;
     var $_path;
-    var $_dir;
+    var $_events;
+    var $_tasks;
 
     function BackendCalDAV($config) {
         $this->_config = $config;
     }
     
     function Logon($username, $domain, $password) {
-        debugLog('CalDAV::logon to webdav server');
-        $this->wdc = new webdav_client();
-        $this->wdc->set_server($this->_config['CALDAV_SERVER']);
-        $this->wdc->set_port($this->_config['CALDAV_PORT']);
-        $this->wdc->set_user($username);
-        $this->wdc->set_pass($password);
-
-        // use HTTP/1.1
-        $this->wdc->set_protocol(1);
-        // enable debugging
-        $this->wdc->set_debug(false);
+        debugLog('CalDAV::logon to CalDav server');
+	$this->cdc = new CalDAVClient($this->_config['CALDAV_SERVER'] . $this->_config['CALDAV_PATH'], $username, $password, "calendar" );
 
         # Replace variables in config
         foreach ($this->_config as $key => $value)
@@ -37,28 +29,13 @@ class BackendCalDav extends BackendDiff {
             debugLog("CalDAV::Config: Updated $key with " .$this->_config[$key]);
         }
                                                     
-        if (!$this->wdc->open()) {
-            debugLog('CalDAV::could not open server connection');
-            return false;
-        }
-        
-        // check if server supports webdav rfc 2518
-        if (!$this->wdc->check_webdav($this->_config['CALDAV_PATH'])) {
-            debugLog('CalDAV::server does not support webdav or user/password may be wrong');
-            return false;
-        }   
-        $this->_path = $this->_config['CALDAV_PATH'];
-
-        debugLog('CalDAV::Successful Logon To WebDAV Server');
+        debugLog('CalDAV::Successful Logon To CalDAV Server');
         return true;
     }
 
     // completing protocol
     function Logoff() {
         debugLog('CalDAV::Closing Connection');
-        if ($this->wdc) {
-            $this->wdc->close();
-        }
         return true;
     }
 
@@ -97,13 +74,20 @@ class BackendCalDav extends BackendDiff {
 	$begin = date("Ymd\THis\Z", $cutoffdate);
 	$diff = time() - $cutoffdate;
 	$finish = date("Ymd\THis\Z", time() + $diff);
-	$range = "<C:time-range start=\"$begin\" end=\"$finish\"/>";
-	$this->_dir = $this->wdc->ls($this->_config['CALDAV_PATH'], $range);
-        if (!$this->_dir)
+
+	if ($folderid == "calendar")
+		$this->events = $this->cdc->GetEvents($begin, $finish);
+	if ($folderid == "tasks")
+		$this->tasks = $this->cdc->GetTodos($begin, $finish);
+        
+	if (!$this->_tasks || !$this->_events)
 		return false;
 
-	foreach($this->_dir as $e) {
-		$this->_path = $this->wdc->_translate_uri($this->_config['CALDAV_PATH']);
+	if ($this->_events)
+	{
+		
+	}
+	foreach ($this->_dir as $e) {
 		$e['href'] = substr($e['href'], strlen($this->_path));
 			
 		if (trim($e['href']) != "") {
@@ -173,14 +157,17 @@ class BackendCalDav extends BackendDiff {
         if (trim($id == "")) {
             return false;
         }
-        
-        if (!$this->_dir) {
-            $this->_dir = $this->wdc->ls($this->_path);
-        }
-        if (!$this->_dir) {
-            return false;
-        }
 
+	debugLog("CalDAV::StatMessage($folderid: $id)");	
+ 
+	if ($this->_events)
+	{
+		return $this->_events[$id];
+	}
+	if ($this->_tasks)
+	{
+		return $this->_tasks[$id];
+	}
         foreach($this->_dir as $e) {
             $e['href'] = substr($e['href'], strlen($this->_path));
             if ($e['href'] == $id) {
@@ -235,28 +222,28 @@ class BackendCalDav extends BackendDiff {
     function GetMessage($folderid, $id, $truncsize, $mimesupport = 0) {
 
         debugLog('CalDAV::GetMessage('.$folderid.', '.$id.', ..)');
+
+	if (trim($id) == "")
+		return;
+ 
+        if ($folderid == "calendar")
+		$output = $this->_events[$id];
+	elseif ($folderid == "tasks")
+		$output = $this->_tasks[$id];
+	else
+		return;		
         
-        if ($folderid != "calendar" && $folderid != "tasks") {
-            return;
-        }
-        if (trim($id == "")) {
-            return;
-        }
-        
-        debugLog("CalDAV::Getting ".$this->_path.$id);
-        $stat = $this->wdc->get($this->_path.$id, $output); 
-        if ($stat == 200) {
-            //debugLog("CalDAV::Got File ".$id." now parseing ".$output);
-            $v = new vcalendar();
-            $v->runparse($output);
-            $v->sort();
+        //debugLog("CalDAV::Got File ".$id." now parseing ".$output);
+        $v = new vcalendar();
+        $v->runparse($output);
+        $v->sort();
                         
-        	if ($folderid == "tasks") {
-                while ($vtodo = $v->getComponent('vtodo', $vcounter)) {
+        if ($folderid == "tasks") {
+        	while ($vtodo = $v->getComponent('vtodo', $vcounter)) {
                     $message = $this->converttotask($vtodo, $truncsize);
                     $vcounter++;
             	}
-            } else {
+        } else {
                 $vcounter = 1;
                 $fullexceptionsarray = array();
                 while ($vevent = $v->getComponent( 'vevent', $vcounter)) {
@@ -289,8 +276,8 @@ class BackendCalDav extends BackendDiff {
     }
 
     function DeleteMessage($folderid, $id) {
-        $http_status_array = $this->wdc->delete($this->_path.'/'.$id);
-        if ($http_status_array['status'] == "200") {
+	$http_status_code = $this->cdc->DoDELETERequest($id);
+        if ($http_status_code == "200") {
             return true;
         } else {
             return false;
@@ -396,7 +383,7 @@ class BackendCalDav extends BackendDiff {
 
         debugLog("CalDAV::putting to ".$this->_path.$id);   
 
-        $retput = $this->wdc->put($this->_path.$id, $output);
+        $retput = $this->cdc->DoPUTRequest($this->_path.$id, $output);
 
         debugLog("CalDAV::output putted $retput");  
 
