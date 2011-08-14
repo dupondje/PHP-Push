@@ -186,7 +186,7 @@ class BackendCalDav extends BackendDiff {
                 $message = $e;
                 $message["id"] = $e['href'];
                 $message["mod"] = $this->getLastModified($e['data']);
-                debugLog('CalDAV::message moded at '.$mod);
+                debugLog('CalDAV::message moded at '. $message["mod"]);
                 $message["flags"] = 1; // always 'read'
                 return $message;
 	}
@@ -195,7 +195,7 @@ class BackendCalDav extends BackendDiff {
                 $message = $e;
                 $message["id"] = $e['href'];
                 $message["mod"] = $this->getLastModified($e['data']);
-                debugLog('CalDAV::message moded at '.$mod);
+                debugLog('CalDAV::message moded at '. $message["mod"]);
                 $message["flags"] = 1; // always 'read'
                 return $message;
 	}
