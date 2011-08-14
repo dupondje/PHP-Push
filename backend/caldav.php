@@ -1,6 +1,6 @@
 <?php
 
-include_once('diffbackend.php');
+require_once('diffbackend.php');
 require_once('class_caldav_client.php');
 require_once('class_ical_client.php');
 
@@ -9,8 +9,8 @@ class BackendCalDav extends BackendDiff {
     var $_devid;
     var $_protocolversion;
     var $_path;
-    var $_events;
-    var $_tasks;
+    var $_events = array();
+    var $_tasks = array();
 
     function BackendCalDAV($config) {
         $this->_config = $config;
@@ -18,7 +18,6 @@ class BackendCalDav extends BackendDiff {
     
     function Logon($username, $domain, $password) {
         debugLog('CalDAV::logon to CalDav server');
-	$this->cdc = new CalDAVClient($this->_config['CALDAV_SERVER'] . $this->_config['CALDAV_PATH'], $username, $password, "calendar" );
 
         # Replace variables in config
         foreach ($this->_config as $key => $value)
@@ -28,6 +27,8 @@ class BackendCalDav extends BackendDiff {
             $this->_config[$key] = str_replace("%u", $username, $this->_config[$key]);
             debugLog("CalDAV::Config: Updated $key with " .$this->_config[$key]);
         }
+	
+	$this->cdc = new CalDAVClient($this->_config['CALDAV_SERVER'] . $this->_config['CALDAV_PATH'], $username, $password, "calendar" );
                                                     
         debugLog('CalDAV::Successful Logon To CalDAV Server');
         return true;
@@ -70,34 +71,41 @@ class BackendCalDav extends BackendDiff {
             return false;
 
         $messages = array();
-
+	
+	/* Calculating the range of events we want to sync */
 	$begin = date("Ymd\THis\Z", $cutoffdate);
 	$diff = time() - $cutoffdate;
 	$finish = date("Ymd\THis\Z", time() + $diff);
 
 	if ($folderid == "calendar")
-		$this->events = $this->cdc->GetEvents($begin, $finish);
+	{
+		$events = $this->cdc->GetEvents($begin, $finish);
+		debugLog("CalDAV::GetMessageList: Got " . count($events) . " events (" . $begin . " to " . $finish . ")");
+		foreach ($events as $e)
+		{
+			$id = $e['href'];
+			$this->_events[$id] = $e;
+			$message = $this->StatMessage($folderid, $id);
+			$this->_events[$id] = $message;
+		}
+		return $this->_events;
+	}
 	if ($folderid == "tasks")
-		$this->tasks = $this->cdc->GetTodos($begin, $finish);
+	{
+		$tasks = $this->cdc->GetTodos($begin, $finish);
+		debugLog("CalDAV::GetMessageList: Got " . count($tasks) . " tasks (" . $begin . " to " . $finish . ")");
+		foreach ($tasks as $e)
+                {
+                        $id = $e['href'];
+                        $this->_tasks[$id] = $e;
+                        $message = $this->StatMessage($folderid, $id);
+                        $this->_tasks[$id] = $message;
+                }
+		return $this->_tasks;
+	}
         
 	if (!$this->_tasks || !$this->_events)
 		return false;
-
-	if ($this->_events)
-	{
-		
-	}
-	foreach ($this->_dir as $e) {
-		$e['href'] = substr($e['href'], strlen($this->_path));
-			
-		if (trim($e['href']) != "") {
-			$message = $this->StatMessage($folderid, $e['href']);
-			if ($message) {
-				$messages[] = $message;
-			}
-		}
-	}
-	return $messages;
     }
 
     function GetFolderList() {
@@ -148,8 +156,8 @@ class BackendCalDav extends BackendDiff {
         return false;
     }
 
-    function StatMessage($folderid, $id) {
-        
+    function StatMessage($folderid, $id) {       
+ 
         if ($folderid != "calendar" && $folderid != "tasks") {
             return false;
         }
@@ -160,63 +168,58 @@ class BackendCalDav extends BackendDiff {
 
 	debugLog("CalDAV::StatMessage($folderid: $id)");	
  
+	$data = null;
 	if ($this->_events)
 	{
-		return $this->_events[$id];
+		$e = $this->_events[$id];
 	}
 	if ($this->_tasks)
 	{
-		return $this->_tasks[$id];
+		$e = $this->_tasks[$id];
 	}
-        foreach($this->_dir as $e) {
-            $e['href'] = substr($e['href'], strlen($this->_path));
-            if ($e['href'] == $id) {
-                $event = $this->isevent($this->_path.$e['href']);
-                if ($event && $folderid == "calendar") {
-                	debugLog('CalDAV::StatMessage('.$folderid.', '.$id.') is '.$event);
-                    $message = array();
-                    $message["id"] = $e['href'];
-                    if (array_key_exists('lastmodified', $e)) {
-                        $message["mod"] = $e['lastmodified'];
+	if ($e == null)
+		return;
+
+       	$event = $this->isevent($e['data']);
+        if ($event && $folderid == "calendar") {
+		debugLog('CalDAV::StatMessage('.$folderid.', '.$id.') is '.$event);
+                $message = $e;
+                $message["id"] = $e['href'];
+                if (array_key_exists('lastmodified', $e)) {
+                	$message["mod"] = $e['lastmodified'];
                         debugLog('CalDAV::message moded at '.$e['lastmodified']);
-                    } else {
+                } else {
                     	$message["mod"] = date("d.m.Y H:i:s");
-                    }
-                    $message["flags"] = 1; // always 'read'
-                    return $message;
                 }
-                if (!$event && $folderid == "tasks") {
-                	debugLog('CalDAV::StatMessage('.$folderid.', '.$id.') is '.$event);
-                    $message = array();
-                    $message["id"] = $e['href'];
-                    if (array_key_exists('lastmodified', $e)) {
-                        $message["mod"] = $e['lastmodified'];
+                $message["flags"] = 1; // always 'read'
+                return $message;
+	}
+        if (!$event && $folderid == "tasks") {
+        	debugLog('CalDAV::StatMessage('.$folderid.', '.$id.') is '.$event);
+                $message = $e;
+                $message["id"] = $e['href'];
+                if (array_key_exists('lastmodified', $e)) {
+                	$message["mod"] = $e['lastmodified'];
                         debugLog('CalDAV::message moded at '.$e['lastmodified']);
-                    } else {
-                        $message["mod"] = date("d.m.Y H:i:s");
-                    }
-                    $message["flags"] = 1; // always 'read'
-                    return $message;
+                } else {
+                	$message["mod"] = date("d.m.Y H:i:s");
                 }
-            }
-        }
+                $message["flags"] = 1; // always 'read'
+                return $message;
+	}
         return false;
     }
 
-    function isevent($href) {
-        $stat = $this->wdc->get($href, $output); 
-        if ($stat == 200) { 
-            $v = new vcalendar();
-            $v->runparse($output);
-            $v->sort();
+    function isevent($data) {
+	$v = new vcalendar();
+        $v->runparse($data);
+        $v->sort();
             
-            if ($vevent = $v->getComponent('vevent')) {
-                return true;
-            } else {
+        if ($vevent = $v->getComponent('vevent')) {
+        	return true;
+        } else {
                 return false;
-            }
         }
-        return false;
     }
 
     function GetMessage($folderid, $id, $truncsize, $mimesupport = 0) {
@@ -227,9 +230,9 @@ class BackendCalDav extends BackendDiff {
 		return;
  
         if ($folderid == "calendar")
-		$output = $this->_events[$id];
+		$output = $this->_events[$id]['data'];
 	elseif ($folderid == "tasks")
-		$output = $this->_tasks[$id];
+		$output = $this->_tasks[$id]['data'];
 	else
 		return;		
         
@@ -379,7 +382,11 @@ class BackendCalDav extends BackendDiff {
 
         debugLog("CalDAV::putting to ".$this->_path.$id);   
 
-        $retput = $this->cdc->DoPUTRequest($this->_path.$id, $output);
+	$etag = "*";
+	if ($return)
+		$etag = $return['etag'];
+
+        $retput = $this->cdc->DoPUTRequest($this->_path.$id, $output, $etag);
 
         debugLog("CalDAV::output putted $retput");  
 
