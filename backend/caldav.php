@@ -185,8 +185,8 @@ class BackendCalDav extends BackendDiff {
 		debugLog('CalDAV::StatMessage('.$folderid.', '.$id.') is '.$event);
                 $message = $e;
                 $message["id"] = $e['href'];
-                if (array_key_exists('lastmodified', $e)) {
-                	$message["mod"] = $e['lastmodified'];
+                if ($mod = getLastMod($e['data'])) {
+                	$message["mod"] = $mod;
                         debugLog('CalDAV::message moded at '.$e['lastmodified']);
                 } else {
                     	$message["mod"] = date("d.m.Y H:i:s");
@@ -198,8 +198,8 @@ class BackendCalDav extends BackendDiff {
         	debugLog('CalDAV::StatMessage('.$folderid.', '.$id.') is '.$event);
                 $message = $e;
                 $message["id"] = $e['href'];
-                if (array_key_exists('lastmodified', $e)) {
-                	$message["mod"] = $e['lastmodified'];
+                if ($mod = getLastMod($e['data'])) {
+                	$message["mod"] = $mod;
                         debugLog('CalDAV::message moded at '.$e['lastmodified']);
                 } else {
                 	$message["mod"] = date("d.m.Y H:i:s");
@@ -220,6 +220,17 @@ class BackendCalDav extends BackendDiff {
         } else {
                 return false;
         }
+    }
+    
+    function getLastMod($data)
+    {
+	$v = new vcalendar();
+	$v->runparse($data);
+	$v->sort();
+	$moddate = $v->getComponent('LAST-MODIFIED');
+	if ($moddate)
+		return date("d.m.Y H:i:s", strtotime($moddate));
+	return $moddate;
     }
 
     function GetMessage($folderid, $id, $truncsize, $mimesupport = 0) {
