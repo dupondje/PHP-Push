@@ -185,12 +185,8 @@ class BackendCalDav extends BackendDiff {
 		debugLog('CalDAV::StatMessage('.$folderid.', '.$id.') is '.$event);
                 $message = $e;
                 $message["id"] = $e['href'];
-                if ($mod = getLastMod($e['data'])) {
-                	$message["mod"] = $mod;
-                        debugLog('CalDAV::message moded at '.$mod);
-                } else {
-                    	$message["mod"] = date("d.m.Y H:i:s");
-                }
+                $message["mod"] = $this->getLastModified($e['data']);
+                debugLog('CalDAV::message moded at '.$mod);
                 $message["flags"] = 1; // always 'read'
                 return $message;
 	}
@@ -198,12 +194,8 @@ class BackendCalDav extends BackendDiff {
         	debugLog('CalDAV::StatMessage('.$folderid.', '.$id.') is '.$event);
                 $message = $e;
                 $message["id"] = $e['href'];
-                if ($mod = getLastMod($e['data'])) {
-                	$message["mod"] = $mod;
-                        debugLog('CalDAV::message moded at '.$mod);
-                } else {
-                	$message["mod"] = date("d.m.Y H:i:s");
-                }
+                $message["mod"] = $this->getLastModified($e['data']);
+                debugLog('CalDAV::message moded at '.$mod);
                 $message["flags"] = 1; // always 'read'
                 return $message;
 	}
@@ -222,15 +214,15 @@ class BackendCalDav extends BackendDiff {
         }
     }
     
-    function getLastMod($data)
+    function getLastModified($data)
     {
-	$v = new vcalendar();
-	$v->runparse($data);
-	$v->sort();
-	$moddate = $v->getComponent('LAST-MODIFIED');
-	if ($moddate)
-		return date("d.m.Y H:i:s", strtotime($moddate));
-	return $moddate;
+        $v = new vcalendar();
+        $v->runparse($data);
+        $v->sort();
+        $moddate = $v->getComponent('LAST-MODIFIED');
+        if ($moddate)
+                return date("d.m.Y H:i:s", strtotime($moddate));
+        return date("d.m.Y H:i:s");
     }
 
     function GetMessage($folderid, $id, $truncsize, $mimesupport = 0) {
