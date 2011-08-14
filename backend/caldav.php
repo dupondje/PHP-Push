@@ -187,7 +187,7 @@ class BackendCalDav extends BackendDiff {
                 $message["id"] = $e['href'];
                 if ($mod = getLastMod($e['data'])) {
                 	$message["mod"] = $mod;
-                        debugLog('CalDAV::message moded at '.$e['lastmodified']);
+                        debugLog('CalDAV::message moded at '.$mod);
                 } else {
                     	$message["mod"] = date("d.m.Y H:i:s");
                 }
@@ -200,7 +200,7 @@ class BackendCalDav extends BackendDiff {
                 $message["id"] = $e['href'];
                 if ($mod = getLastMod($e['data'])) {
                 	$message["mod"] = $mod;
-                        debugLog('CalDAV::message moded at '.$e['lastmodified']);
+                        debugLog('CalDAV::message moded at '.$mod);
                 } else {
                 	$message["mod"] = date("d.m.Y H:i:s");
                 }
