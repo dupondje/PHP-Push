@@ -219,9 +219,11 @@ class BackendCalDav extends BackendDiff {
         $v = new vcalendar();
         $v->runparse($data);
         $v->sort();
-        $moddate = $v->getComponent('LAST-MODIFIED');
-        if ($moddate)
-                return date("d.m.Y H:i:s", strtotime($moddate));
+	while ($vevent = $v->getComponent('vevent')) {
+	        $m = $vevent->getProperty('LAST-MODIFIED');
+		if ($m)
+			return date("d.m.Y H:i:s", mktime($m['hour'], $m['min'], $m['sec'], $m['month'], $m['day'], $m['year']));
+	}
         return date("d.m.Y H:i:s");
     }
 
