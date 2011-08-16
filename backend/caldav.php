@@ -283,7 +283,7 @@ class BackendCalDav extends BackendDiff {
 	debugLog("CalDAV::DeleteMessage(" . $folderid . ", " . $id.", ..)");
 	$http_status_code = $this->cdc->DoDELETERequest($id);
 	debugLog("CalDAV::DeleteMessage Reply: $http_status_code");
-        if ($http_status_code == "200") {
+        if ($http_status_code == "204") {
             return true;
         } else {
             return false;

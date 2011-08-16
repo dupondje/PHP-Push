@@ -317,7 +317,9 @@ class CalDAVClient {
       $this->SetMatch( true, $etag );
     }
     $headers = $this->DoRequest($relative_url);
-    return $headers;
+    if (preg_match('/HTTP\/\d\.\d (\d{3})/', $headers, $status))
+        return $status[1];
+    return false;
   }
 
 
