@@ -272,7 +272,7 @@ class CalDAVClient {
     preg_match('/^HTTP\/1\.[01]+\s+(\d+)\s+/i', $headers, $match);
     /* if ($match) { */
     /* Commented because some bug in this handling, should be fixed, but this works for now */
-    if (false)
+    if (false) {
         //print htmlentities($this->GetXmlResponse())."<br/>";
         $xml = simplexml_load_string($this->GetXmlResponse());
         $xml->registerXPathNamespace('e', 'DAV:');
