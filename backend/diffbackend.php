@@ -630,7 +630,7 @@ class BackendDiff {
         return true;
     }
 
-    function GetWasteBasket() {
+    function GetWasteBasket($class) {
         return false;
     }
 

@@ -605,7 +605,7 @@ function HandleSync($backend, $protocolversion, $devid) {
                         break;
                     case SYNC_REMOVE:
                         if(isset($collection["deletesasmoves"])) {
-                            $folderid = $backend->GetWasteBasket();
+                            $folderid = $backend->GetWasteBasket($collection["class"]);
 
                             if($folderid) {
                                 $importer->ImportMessageMove($serverid, $folderid);

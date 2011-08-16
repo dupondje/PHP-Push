@@ -372,20 +372,19 @@ class BackendCombined extends BackendDiff {
 	
 	//if the wastebasket is set to one backend, return the wastebasket of that backend
 	//else return the first waste basket we can find
-	function GetWasteBasket(){
-		debugLog('Combined::GetWasteBasket()');
-		if(isset($this->_config['folderbackend'][SYNC_FOLDER_TYPE_WASTEBASKET])){
-			$wb = $this->_backends[$this->_config['folderbackend'][SYNC_FOLDER_TYPE_WASTEBASKET]]->GetWasteBasket();
-			if($wb){
-				return $this->_config['folderbackend'][SYNC_FOLDER_TYPE_WASTEBASKET].$this->_config['delimiter'].$wb;
-			}
-			return false;
+	function GetWasteBasket($class){
+		debugLog("Combined::GetWasteBasket($class)");
+		if ($class == "Email")
+		{
+			$wb = $this->_backends['i']->GetWasteBasket($class);
+			if ($wb)
+				return $this->_config['i'].$wb;
 		}
-		foreach($this->_backends as $i => $b){
-			$w = $this->_backends[$i]->GetWasteBasket();
-			if($w){
-				return $i.$this->_config['delimiter'].$w;
-			}
+		if ($class == "Calendar" || $class == "Tasks")
+		{
+			$wb = $this->_backends['c']->GetWasteBasket($class);
+			if ($wb)
+				return $this->_config['c'].$wb;
 		}
 		return false;
 	}

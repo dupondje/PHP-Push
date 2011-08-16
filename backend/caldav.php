@@ -51,7 +51,7 @@ class BackendCalDav extends BackendDiff {
         return false;
     }
 
-    function GetWasteBasket() {
+    function GetWasteBasket($class) {
         return false;
     }
     
@@ -86,7 +86,6 @@ class BackendCalDav extends BackendDiff {
 			$id = $e['href'];
 			$this->_events[$id] = $e;
 			$message = $this->StatMessage($folderid, $id);
-			$this->_events[$id] = $message;
 		}
 		return $this->_events;
 	}
@@ -99,7 +98,6 @@ class BackendCalDav extends BackendDiff {
                         $id = $e['href'];
                         $this->_tasks[$id] = $e;
                         $message = $this->StatMessage($folderid, $id);
-                        $this->_tasks[$id] = $message;
                 }
 		return $this->_tasks;
 	}
@@ -168,7 +166,7 @@ class BackendCalDav extends BackendDiff {
 
 	debugLog("CalDAV::StatMessage($folderid: $id)");	
  
-	$data = null;
+	$e = null;
 	if ($this->_events)
 	{
 		$e = $this->_events[$id];
@@ -188,6 +186,7 @@ class BackendCalDav extends BackendDiff {
                 $message["mod"] = $this->getLastModified($e['data']);
                 debugLog('CalDAV::message moded at '. $message["mod"]);
                 $message["flags"] = 1; // always 'read'
+		$this->_events[$id] = $message;
                 return $message;
 	}
         if (!$event && $folderid == "tasks") {
@@ -197,6 +196,7 @@ class BackendCalDav extends BackendDiff {
                 $message["mod"] = $this->getLastModified($e['data']);
                 debugLog('CalDAV::message moded at '. $message["mod"]);
                 $message["flags"] = 1; // always 'read'
+		$this->_tasks[$id] = $message;
                 return $message;
 	}
         return false;
@@ -280,7 +280,9 @@ class BackendCalDav extends BackendDiff {
     }
 
     function DeleteMessage($folderid, $id) {
+	debugLog("CalDAV::DeleteMessage(" . $folderid . ", " . $id.", ..)");
 	$http_status_code = $this->cdc->DoDELETERequest($id);
+	debugLog("CalDAV::DeleteMessage Reply: $http_status_code");
         if ($http_status_code == "200") {
             return true;
         } else {
@@ -392,8 +394,17 @@ class BackendCalDav extends BackendDiff {
 		$etag = $return['etag'];
 
         $retput = $this->cdc->DoPUTRequest($this->_path.$id, $output, $etag);
+        debugLog("CalDAV::output putted etag: $etag new etag: $retput");
 
-        debugLog("CalDAV::output putted $retput");  
+	$obj = array();
+	$obj["etag"] = $retput;
+	$obj["href"] = $id;
+	$obj["data"] = $output;
+
+	if ($folderid == "calendar")
+		$this->_events[$id] = $obj;
+	else
+		$this->_tasks[$id] = $obj;
 
         return $this->StatMessage($folderid, $id);
     }

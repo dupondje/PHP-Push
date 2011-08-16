@@ -94,7 +94,7 @@ class BackendLDAP_Contacts extends BackendDiff {
         return false;
     }
 
-    function GetWasteBasket() {
+    function GetWasteBasket($class) {
         return false;
     }
 

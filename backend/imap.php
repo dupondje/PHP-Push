@@ -463,7 +463,7 @@ class BackendIMAP extends BackendDiff {
      * as moves and are sent to your backend as a move. If it returns FALSE, then deletes
      * are always handled as real deletes and will be sent to your importer as a DELETE
      */
-    function GetWasteBasket() {
+    function GetWasteBasket($class) {
         if ($this->_wasteID == false) {
             //try to get the waste basket without doing complete hierarchy sync
             $wastebaskt = @imap_getmailboxes($this->_mbox, $this->_server, "Trash");
