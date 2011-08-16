@@ -75,7 +75,7 @@ class BackendCalDav extends BackendDiff {
 	/* Calculating the range of events we want to sync */
 	$begin = date("Ymd\THis\Z", $cutoffdate);
 	$diff = time() - $cutoffdate;
-	$finish = date("Ymd\THis\Z", time() + $diff);
+	$finish = date("Ymd\THis\Z", 2147483647);
 
 	if ($folderid == "calendar")
 	{
