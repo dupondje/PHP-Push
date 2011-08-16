@@ -1,20 +1,14 @@
 <?
 /***********************************************
 * File	  :   config.php
-* Project   :   Z-Push
+* Project   :   PHP-Push
 * Descr	 :   Main configuration file
 *
-* Created   :   01.10.2007
-*
-* © Zarafa Deutschland GmbH, www.zarafaserver.de
-* Some code © 2010 Forget About IT Ltd. 
-* This file is distributed under GPL v2.
-* Consult LICENSE file for details
 ************************************************/
 
     // Defines the default time zone
     if (function_exists("date_default_timezone_set")){
-        date_default_timezone_set("Europe/Amsterdam");
+        date_default_timezone_set("Europe/Brussels");
     }
 
     // Defines the base path on the server, terminated by a slash
@@ -199,7 +193,6 @@
 		'folderbackend' => array(
 			SYNC_FOLDER_TYPE_INBOX => 'i',
 			SYNC_FOLDER_TYPE_DRAFTS => 'i',
-			SYNC_FOLDER_TYPE_WASTEBASKET => 'i',
 			SYNC_FOLDER_TYPE_SENTMAIL => 'i',
 			SYNC_FOLDER_TYPE_OUTBOX => 'i',
 			SYNC_FOLDER_TYPE_TASK => 'c',
