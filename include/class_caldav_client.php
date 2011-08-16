@@ -316,8 +316,8 @@ class CalDAVClient {
     if ( $etag != null ) {
       $this->SetMatch( true, $etag );
     }
-    $this->DoRequest($relative_url);
-    return $this->resultcode;
+    $headers = $this->DoRequest($relative_url);
+    return $headers;
   }
 
 
