@@ -413,6 +413,18 @@ class BackendCalDav extends BackendDiff {
         return false;
     }
 
+    /* At this moment we DO NOT support AlterPing
+     * But because Ping does not have a cutoffdate,
+     * we get into issues. So we just "fake" AlterPing
+     */
+    function AlterPing() {
+        return true;
+    }
+
+    function AlterPingChanges($folderid, &$syncstate) {
+        return array();
+    }
+
     function setoutlooktimezone($message, $vtimezone) {
         //$message->timezone = $vtimezone->getProperty('tzid');
         return $message;
