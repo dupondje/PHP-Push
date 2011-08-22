@@ -30,25 +30,11 @@ class BackendLDAP_Contacts extends BackendDiff {
     var $_username;
     var $_domain;
     var $_password;
-
     var $_config;
+
     function BackendLDAP_Contacts($config) {
 	$this->_config = $config;
     }
-
-
-
-#    function expand_dn( $username, $domain ) {
-#
-#        // TODO make this configurable
-#        // enter your LDAP base dn here
-#	## NO LONGER NEEDED
-#        #$base = "mail=%u,vd=foo,ou=bar,dc=domain,dc=let";
-#        #$base = "uid=%u,ou=People,dc=NEDDYNET,dc=uk,dc=fabit,dc=net";
-#	$base = $this->_config['LDAP_USER_DN'] ."," .$this->_config['LDAP_ROOT_DN'];
-#        $base = str_replace( "%u", $username, $base );
-#        return $base;
-#    }
 
     function Logon( $username, $domain, $password ) {
         debugLog('LdapContacts::Logon(user='.$username.')');
@@ -559,6 +545,18 @@ class BackendLDAP_Contacts extends BackendDiff {
 
     function MoveMessage($folderid, $id, $newfolderid) {
         return false;
+    }
+
+    /* At this moment we DO NOT support AlterPing
+     * But because Ping does not have a cutoffdate,
+     * we get into issues. So we just "fake" AlterPing
+     */
+    function AlterPing() {
+	return true;
+    }
+
+    function AlterPingChanges($folderid, &$syncstate) {
+	return array();
     }
 
 };

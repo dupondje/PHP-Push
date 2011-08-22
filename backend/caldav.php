@@ -75,7 +75,7 @@ class BackendCalDav extends BackendDiff {
 	/* Calculating the range of events we want to sync */
 	$begin = date("Ymd\THis\Z", $cutoffdate);
 	$diff = time() - $cutoffdate;
-	$finish = date("Ymd\THis\Z", time() + $diff);
+	$finish = date("Ymd\THis\Z", 2147483647);
 
 	if ($folderid == "calendar")
 	{
@@ -416,6 +416,18 @@ class BackendCalDav extends BackendDiff {
 
     function MoveMessage($folderid, $id, $newfolderid) {
         return false;
+    }
+
+    /* At this moment we DO NOT support AlterPing
+     * But because Ping does not have a cutoffdate,
+     * we get into issues. So we just "fake" AlterPing
+     */
+    function AlterPing() {
+        return true;
+    }
+
+    function AlterPingChanges($folderid, &$syncstate) {
+        return array();
     }
 
     function setoutlooktimezone($message, $vtimezone) {
