@@ -167,16 +167,21 @@ class BackendCalDav extends BackendDiff {
 	debugLog("CalDAV::StatMessage($folderid: $id)");	
  
 	$e = null;
-	if ($this->_events)
+	if ($folderid == "calendar")
 	{
 		$e = $this->_events[$id];
 	}
-	if ($this->_tasks)
+	if ($folderid == "tasks")
 	{
 		$e = $this->_tasks[$id];
 	}
 	if ($e == null)
-		return;
+	{
+		$e = $this->cdc->GetEntryByUid(substr($id, 0, strlen($id)-4));
+		if ($e == null && count($e) <= 0)
+			return;
+		$e = $e[0];
+	}
 
        	$event = $this->isevent($e['data']);
         if ($event && $folderid == "calendar") {
@@ -435,7 +440,7 @@ class BackendCalDav extends BackendDiff {
         $message = $this->converttooutlook($message, $vevent, $truncsize, $mapping);
 
         if (($message->endtime-$message->starttime) >= 24*60*60) {
-            debugLog("CalDAV:: sdt edt diff ".($message->endtime-$message->starttime));
+	    debugLog("CalDAV:: sdt edt diff : Endtime: " . $message->endtime . " Startime: " . $message->starttime);
             $message->alldayevent = "1";
         }
 
@@ -754,7 +759,10 @@ class BackendCalDav extends BackendDiff {
         }
     
         if (array_key_exists("COUNT", $args)) $rtn->occurrences = $args['COUNT'];
-        if (array_key_exists("INTERVAL", $args)) $rtn->interval = $args['INTERVAL'];        
+        if (array_key_exists("INTERVAL", $args))
+		$rtn->interval = $args['INTERVAL'];        
+	else
+		$rtn->interval = "1";
         if (array_key_exists("UNTIL", $args)) $rtn->until = gmmktime($args['UNTIL']['hour'], $args['UNTIL']['min'], $args['UNTIL']['sec'], $args['UNTIL']['month'], $args['UNTIL']['day'], $args['UNTIL']['year']);
         
         return $rtn;
