@@ -27,9 +27,7 @@ class BackendCalDav extends BackendDiff {
             $this->_config[$key] = str_replace("%u", $username, $this->_config[$key]);
             debugLog("CalDAV::Config: Updated $key with " .$this->_config[$key]);
         }
-	
-	$this->cdc = new CalDAVClient($this->_config['CALDAV_SERVER'] . $this->_config['CALDAV_PATH'], $username, $password, "calendar" );
-                                                    
+        $this->cdc = new CalDAVClient($this->_config['CALDAV_SERVER'] . $this->_config['CALDAV_PATH'], $username, $password, "calendar" );                                            
         debugLog('CalDAV::Successful Logon To CalDAV Server');
         return true;
     }
@@ -71,39 +69,39 @@ class BackendCalDav extends BackendDiff {
             return false;
 
         $messages = array();
-	
-	/* Calculating the range of events we want to sync */
-	$begin = date("Ymd\THis\Z", $cutoffdate);
-	$diff = time() - $cutoffdate;
-	$finish = date("Ymd\THis\Z", 2147483647);
+    
+        /* Calculating the range of events we want to sync */
+        $begin = date("Ymd\THis\Z", $cutoffdate);
+        $diff = time() - $cutoffdate;
+        $finish = date("Ymd\THis\Z", 2147483647);
 
-	if ($folderid == "calendar")
-	{
-		$events = $this->cdc->GetEvents($begin, $finish);
-		debugLog("CalDAV::GetMessageList: Got " . count($events) . " events (" . $begin . " to " . $finish . ")");
-		foreach ($events as $e)
-		{
-			$id = $e['href'];
-			$this->_events[$id] = $e;
-			$message = $this->StatMessage($folderid, $id);
-		}
-		return $this->_events;
-	}
-	if ($folderid == "tasks")
-	{
-		$tasks = $this->cdc->GetTodos($begin, $finish);
-		debugLog("CalDAV::GetMessageList: Got " . count($tasks) . " tasks (" . $begin . " to " . $finish . ")");
-		foreach ($tasks as $e)
-                {
-                        $id = $e['href'];
-                        $this->_tasks[$id] = $e;
-                        $message = $this->StatMessage($folderid, $id);
-                }
-		return $this->_tasks;
-	}
+        if ($folderid == "calendar")
+        {
+            $events = $this->cdc->GetEvents($begin, $finish);
+            debugLog("CalDAV::GetMessageList: Got " . count($events) . " events (" . $begin . " to " . $finish . ")");
+            foreach ($events as $e)
+            {
+                $id = $e['href'];
+                $this->_events[$id] = $e;
+                $message = $this->StatMessage($folderid, $id);
+            }
+            return $this->_events;
+        }
+        if ($folderid == "tasks")
+        {
+            $tasks = $this->cdc->GetTodos($begin, $finish);
+            debugLog("CalDAV::GetMessageList: Got " . count($tasks) . " tasks (" . $begin . " to " . $finish . ")");
+            foreach ($tasks as $e)
+            {
+                $id = $e['href'];
+                $this->_tasks[$id] = $e;
+                $message = $this->StatMessage($folderid, $id);
+            }
+        return $this->_tasks;
+        }
         
-	if (!$this->_tasks || !$this->_events)
-		return false;
+        if (!$this->_tasks || !$this->_events)
+            return false;
     }
 
     function GetFolderList() {
@@ -159,63 +157,62 @@ class BackendCalDav extends BackendDiff {
         if ($folderid != "calendar" && $folderid != "tasks") {
             return false;
         }
-
         if (trim($id == "")) {
             return false;
         }
 
-	debugLog("CalDAV::StatMessage($folderid: $id)");	
+        debugLog("CalDAV::StatMessage($folderid: $id)");    
  
-	$e = null;
-	if ($folderid == "calendar")
-	{
-		$e = $this->_events[$id];
-	}
-	if ($folderid == "tasks")
-	{
-		$e = $this->_tasks[$id];
-	}
-	if ($e == null)
-	{
-		$e = $this->cdc->GetEntryByUid(substr($id, 0, strlen($id)-4));
-		if ($e == null && count($e) <= 0)
-			return;
-		$e = $e[0];
-	}
+        $e = null;
+        if ($folderid == "calendar")
+        {
+            $e = $this->_events[$id];
+        }
+        if ($folderid == "tasks")
+        {
+            $e = $this->_tasks[$id];
+        }
+        if ($e == null)
+        {
+            $e = $this->cdc->GetEntryByUid(substr($id, 0, strlen($id)-4));
+            if ($e == null && count($e) <= 0)
+                return;
+            $e = $e[0];
+        }
 
-       	$event = $this->isevent($e['data']);
+        $event = $this->isevent($e['data']);
         if ($event && $folderid == "calendar") {
-		debugLog('CalDAV::StatMessage('.$folderid.', '.$id.') is '.$event);
-                $message = $e;
-                $message["id"] = $e['href'];
-                $message["mod"] = $this->getLastModified($e['data']);
-                debugLog('CalDAV::message moded at '. $message["mod"]);
-                $message["flags"] = 1; // always 'read'
-		$this->_events[$id] = $message;
-                return $message;
-	}
+            debugLog('CalDAV::StatMessage('.$folderid.', '.$id.') is '.$event);
+            $message = $e;
+            $message["id"] = $e['href'];
+            $message["mod"] = $this->getLastModified($e['data']);
+            debugLog('CalDAV::message moded at '. $message["mod"]);
+            $message["flags"] = 1; // always 'read'
+            $this->_events[$id] = $message;
+            return $message;
+        }
         if (!$event && $folderid == "tasks") {
-        	debugLog('CalDAV::StatMessage('.$folderid.', '.$id.') is '.$event);
-                $message = $e;
-                $message["id"] = $e['href'];
-                $message["mod"] = $this->getLastModified($e['data']);
-                debugLog('CalDAV::message moded at '. $message["mod"]);
-                $message["flags"] = 1; // always 'read'
-		$this->_tasks[$id] = $message;
-                return $message;
-	}
+            debugLog('CalDAV::StatMessage('.$folderid.', '.$id.') is '.$event);
+            $message = $e;
+            $message["id"] = $e['href'];
+            $message["mod"] = $this->getLastModified($e['data']);
+            debugLog('CalDAV::message moded at '. $message["mod"]);
+            $message["flags"] = 1; // always 'read'
+            $this->_tasks[$id] = $message;
+            return $message;
+        }
         return false;
     }
 
     function isevent($data) {
-	$v = new vcalendar();
+        $v = new vcalendar();
         $v->runparse($data);
         $v->sort();
             
         if ($vevent = $v->getComponent('vevent')) {
-        	return true;
+            return true;
         } else {
-                return false;
+            return false;
         }
     }
     
@@ -224,11 +221,11 @@ class BackendCalDav extends BackendDiff {
         $v = new vcalendar();
         $v->runparse($data);
         $v->sort();
-	while ($vevent = $v->getComponent('vevent')) {
-	        $m = $vevent->getProperty('LAST-MODIFIED');
-		if ($m)
-			return date("d.m.Y H:i:s", mktime($m['hour'], $m['min'], $m['sec'], $m['month'], $m['day'], $m['year']));
-	}
+        while ($vevent = $v->getComponent('vevent')) {
+            $m = $vevent->getProperty('LAST-MODIFIED');
+            if ($m)
+                return date("d.m.Y H:i:s", mktime($m['hour'], $m['min'], $m['sec'], $m['month'], $m['day'], $m['year']));
+        }
         return date("d.m.Y H:i:s");
     }
 
@@ -236,15 +233,15 @@ class BackendCalDav extends BackendDiff {
 
         debugLog('CalDAV::GetMessage('.$folderid.', '.$id.', ..)');
 
-	if (trim($id) == "")
-		return;
+        if (trim($id) == "")
+            return;
  
         if ($folderid == "calendar")
-		$output = $this->_events[$id]['data'];
-	elseif ($folderid == "tasks")
-		$output = $this->_tasks[$id]['data'];
-	else
-		return;		
+            $output = $this->_events[$id]['data'];
+        elseif ($folderid == "tasks")
+            $output = $this->_tasks[$id]['data'];
+        else
+            return;     
         
         //debugLog("CalDAV::Got File ".$id." now parseing ".$output);
         $v = new vcalendar();
@@ -252,44 +249,44 @@ class BackendCalDav extends BackendDiff {
         $v->sort();
                         
         if ($folderid == "tasks") {
-        	while ($vtodo = $v->getComponent('vtodo', $vcounter)) {
-                    $message = $this->converttotask($vtodo, $truncsize);
-                    $vcounter++;
-            	}
-        } else {
-                $vcounter = 1;
-                $fullexceptionsarray = array();
-                while ($vevent = $v->getComponent( 'vevent', $vcounter)) {
-                    $val = $vevent->getProperty("RECURRENCE-ID");
-                    if ($val === false) {
-                        $message = $this->converttoappointment($vevent, $truncsize);
-                    } else {
-                        $tmp = $this->converttoappointment($vevent, $truncsize);
-                        $tmp->deleted = "0";
-			//The exceptionstarttime is the ORIGINAL starttime of the event
-			//On Thunderbird this is equal to the RECCURENCE-ID (which is in $val)
-                        $tmp->exceptionstarttime = mktime($val['hour'], $val['min'], $val['sec'], $val['month'], $val['day'], $val['year']);
-                        unset($tmp->uid);
-                        unset($tmp->exceptions);
-                        array_push($fullexceptionsarray, $tmp);
-                        unset($tmp);
-                    }
-                    $vcounter++;
-                }
-                $message->exceptions = array_merge($message->exceptions, $fullexceptionsarray);
+            while ($vtodo = $v->getComponent('vtodo', $vcounter)) {
+                $message = $this->converttotask($vtodo, $truncsize);
+                $vcounter++;
             }
+        } else {
+            $vcounter = 1;
+            $fullexceptionsarray = array();
+            while ($vevent = $v->getComponent( 'vevent', $vcounter)) {
+                $val = $vevent->getProperty("RECURRENCE-ID");
+                if ($val === false) {
+                    $message = $this->converttoappointment($vevent, $truncsize);
+                } else {
+                    $tmp = $this->converttoappointment($vevent, $truncsize);
+                    $tmp->deleted = "0";
+                    //The exceptionstarttime is the ORIGINAL starttime of the event
+                    //On Thunderbird this is equal to the RECCURENCE-ID (which is in $val)
+                    $tmp->exceptionstarttime = mktime($val['hour'], $val['min'], $val['sec'], $val['month'], $val['day'], $val['year']);
+                    unset($tmp->uid);
+                    unset($tmp->exceptions);
+                    array_push($fullexceptionsarray, $tmp);
+                    unset($tmp);
+                }
+                $vcounter++;
+            }
+            $message->exceptions = array_merge($message->exceptions, $fullexceptionsarray);
+        }
 
-            if ($vtimezone = $v->getComponent( 'vtimezone' )) { 
-                $message = $this->setoutlooktimezone($message, $vtimezone);
-            }           
-            debugLog("CalDAV::Finsihed Converting ".$id." now returning");
-            return $message;
+        if ($vtimezone = $v->getComponent( 'vtimezone' )) { 
+            $message = $this->setoutlooktimezone($message, $vtimezone);
+        }           
+        debugLog("CalDAV::Finsihed Converting ".$id." now returning");
+        return $message;
     }
 
     function DeleteMessage($folderid, $id) {
-	debugLog("CalDAV::DeleteMessage(" . $folderid . ", " . $id.", ..)");
-	$http_status_code = $this->cdc->DoDELETERequest($id);
-	debugLog("CalDAV::DeleteMessage Reply: $http_status_code");
+        debugLog("CalDAV::DeleteMessage(" . $folderid . ", " . $id.", ..)");
+        $http_status_code = $this->cdc->DoDELETERequest($id);
+        debugLog("CalDAV::DeleteMessage Reply: $http_status_code");
         if ($http_status_code == "204") {
             return true;
         } else {
@@ -352,8 +349,7 @@ class BackendCalDav extends BackendDiff {
                         } else {
                             $tmpevent->setProperty("recurrence-id",  $this->parseDate($ex->exceptionstarttime));
                         }
-                        array_push($exarray, $tmpevent);
-                        
+                        array_push($exarray, $tmpevent);            
                     }
                 }
                 debugLog("CalDAV:: ".print_r($deletedarray ,true));
@@ -372,7 +368,6 @@ class BackendCalDav extends BackendDiff {
         debugLog('CalDAV::Converted to iCal: ');    
         $v = new vcalendar();
         
-
         if ($folderid == "tasks") {
             $v->setComponent( $vtodo );
         } else {
@@ -393,25 +388,24 @@ class BackendCalDav extends BackendDiff {
         }
         
         $output = $v->createCalendar();
-
         debugLog("CalDAV::putting to ".$this->_path.$id);   
 
-	$etag = "*";
-	if ($return)
-		$etag = $return['etag'];
+        $etag = "*";
+        if ($return)
+            $etag = $return['etag'];
 
         $retput = $this->cdc->DoPUTRequest($this->_path.$id, $output, $etag);
         debugLog("CalDAV::output putted etag: $etag new etag: $retput");
 
-	$obj = array();
-	$obj["etag"] = $retput;
-	$obj["href"] = $id;
-	$obj["data"] = $output;
+        $obj = array();
+        $obj["etag"] = $retput;
+        $obj["href"] = $id;
+        $obj["data"] = $output;
 
-	if ($folderid == "calendar")
-		$this->_events[$id] = $obj;
-	else
-		$this->_tasks[$id] = $obj;
+        if ($folderid == "calendar")
+            $this->_events[$id] = $obj;
+        else
+            $this->_tasks[$id] = $obj;
 
         return $this->StatMessage($folderid, $id);
     }
@@ -454,7 +448,7 @@ class BackendCalDav extends BackendDiff {
         $message = $this->converttooutlook($message, $vevent, $truncsize, $mapping);
 
         if (($message->endtime-$message->starttime) >= 24*60*60) {
-	    debugLog("CalDAV:: sdt edt diff : Endtime: " . $message->endtime . " Startime: " . $message->starttime);
+            debugLog("CalDAV:: sdt edt diff : Endtime: " . $message->endtime . " Startime: " . $message->starttime);
             $message->alldayevent = "1";
         }
 
@@ -774,9 +768,9 @@ class BackendCalDav extends BackendDiff {
     
         if (array_key_exists("COUNT", $args)) $rtn->occurrences = $args['COUNT'];
         if (array_key_exists("INTERVAL", $args))
-		$rtn->interval = $args['INTERVAL'];        
-	else
-		$rtn->interval = "1";
+            $rtn->interval = $args['INTERVAL'];        
+        else
+            $rtn->interval = "1";
         if (array_key_exists("UNTIL", $args)) $rtn->until = gmmktime($args['UNTIL']['hour'], $args['UNTIL']['min'], $args['UNTIL']['sec'], $args['UNTIL']['month'], $args['UNTIL']['day'], $args['UNTIL']['year']);
         
         return $rtn;
