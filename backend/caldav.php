@@ -266,7 +266,9 @@ class BackendCalDav extends BackendDiff {
                     } else {
                         $tmp = $this->converttoappointment($vevent, $truncsize);
                         $tmp->deleted = "0";
-                        $tmp->exceptionstarttime = $tmp->starttime;
+			//The exceptionstarttime is the ORIGINAL starttime of the event
+			//On Thunderbird this is equal to the RECCURENCE-ID (which is in $val)
+                        $tmp->exceptionstarttime = mktime($val['hour'], $val['min'], $val['sec'], $val['month'], $val['day'], $val['year']);
                         unset($tmp->uid);
                         unset($tmp->exceptions);
                         array_push($fullexceptionsarray, $tmp);
