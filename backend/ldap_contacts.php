@@ -552,12 +552,11 @@ class BackendLDAP_Contacts extends BackendDiff {
      * we get into issues. So we just "fake" AlterPing
      */
     function AlterPing() {
-	return true;
+	    return true;
     }
 
     function AlterPingChanges($folderid, &$syncstate) {
-	return array();
+	    return array();
     }
-
 };
 ?>
