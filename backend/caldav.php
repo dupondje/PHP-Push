@@ -797,6 +797,19 @@ class BackendCalDav extends BackendDiff {
         $ts = $ts + ($extradays*24*60*60);
         return date('Ymd\THis', $ts);
     }
+    function parseGMTDate($ts, $extradays = 0) {
+        $ts = $ts + ($extradays*24*60*60);
+        return gmdate('Ymd\THis\Z', $ts);
+    }
+ 
+    function parseDateUntil($ts)
+        $ts = getdate($ts);
+        if ($ts['hour'] != 0 || $ts['minutes'] != 0 || $ts['seconds'] != 0)
+        {
+            $ts = mktime(0, 0, 0, $ts['month'], $ts['day'], $ts['year']) + (24*60*60);
+        } 
+        return date('Ymd\THis', $ts);
+    }
     
     function parseDateToOutlook($ts) {
         return strtotime($ts);
@@ -1054,7 +1067,7 @@ class BackendCalDav extends BackendDiff {
 
                         $args['INTERVAL'] = 1;
                         if (isset($val->interval) && $val->interval != "") $args['INTERVAL'] = $val->interval;
-                        if (isset($val->until) && $val->until != "") $args['UNTIL'] = $this->parseDate($val->until, 1);
+                        if (isset($val->until) && $val->until != "") $args['UNTIL'] = $this->parseGMTDate($val->until);
                         if (isset($val->occurrences) && $val->occurrences != "") $args['COUNT'] = $val->occurrences;
 
                         $icalcomponent->setProperty( $k, $args);                        
