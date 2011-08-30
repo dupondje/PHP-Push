@@ -802,7 +802,7 @@ class BackendCalDav extends BackendDiff {
         return gmdate('Ymd\THis\Z', $ts);
     }
  
-    function parseDateUntil($ts)
+    function parseDateUntil($ts) {
         $ts = getdate($ts);
         if ($ts['hour'] != 0 || $ts['minutes'] != 0 || $ts['seconds'] != 0)
         {
