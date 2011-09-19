@@ -361,7 +361,7 @@ class BackendIMAP extends BackendDiff {
                             }
                         }
                     }
-                    if ($multipartmixed) {
+                    if ($multipartmixed && strpos(strtolower($mess2->headers['content-type']), "alternative") !== false) {
                         //this happens if a multipart/alternative message is forwarded
                         //then it's a multipart/mixed message which consists of:
                         //1. text/plain part which was written on the mobile
@@ -549,14 +549,14 @@ class BackendIMAP extends BackendDiff {
             foreach ($list as $val) {
                 $box = array();
                 // cut off serverstring
-                $box["id"] = imap_utf7_decode(substr($val->name, strlen($this->_server)));
+                $box["id"] = substr($val->name, strlen($this->_server));
 
-                $fhir = array_map('imap_utf7_encode',explode($val->delimiter, $box["id"]));
+                $fhir = explode($val->delimiter, $box["id"]);
                 if (count($fhir) > 1) {
                     $this->getModAndParentNames($fhir, $box["mod"], $box["parent"]);
                 }
                 else {
-                    $box["mod"] = imap_utf7_encode($box["id"]);
+                    $box["mod"] = $box["id"];
                     $box["parent"] = "0";
                 }
                 $folders[]=$box;
@@ -627,14 +627,14 @@ class BackendIMAP extends BackendDiff {
 
         // define the rest as other-folders
         else {
-               if (count($fhir) > 1) {
-                   $this->getModAndParentNames($fhir, $folder->displayname, $folder->parentid);
-                   $folder->displayname = windows1252_to_utf8(imap_utf7_decode($folder->displayname));
-               }
-               else {
-                $folder->displayname = windows1252_to_utf8(imap_utf7_decode($id));
+            if (count($fhir) > 1) {
+                $this->getModAndParentNames($fhir, $folder->displayname, $folder->parentid);
+                $folder->displayname = zp_utf7_to_utf8(zp_utf7_iconv_decode($folder->displayname));
+            }
+            else {
+                $folder->displayname = zp_utf7_to_utf8(zp_utf7_iconv_decode($id));
                 $folder->parentid = "0";
-               }
+            }
             $folder->type = SYNC_FOLDER_TYPE_OTHER;
         }
 
@@ -678,6 +678,7 @@ class BackendIMAP extends BackendDiff {
         $this->imap_reopenFolder($folderid);
 
         // build name for new mailbox
+        $displayname = zp_utf7_iconv_encode(zp_utf8_to_utf7($displayname));
         $newname = $this->_server . $folderid . $this->_serverdelimiter . $displayname;
 
         $csts = false;
@@ -1074,9 +1075,9 @@ class BackendIMAP extends BackendDiff {
 
     function enc_multipart($boundary, $body, $body_ct, $body_cte) {
         $mail_body = "This is a multi-part message in MIME format\n\n";
-//        $mail_body .= "--$boundary\n";
-//        $mail_body .= "Content-Type: $body_ct\n";
-//        $mail_body .= "Content-Transfer-Encoding: $body_cte\n\n";
+        $mail_body .= "--$boundary\n";
+        $mail_body .= "Content-Type: $body_ct\n";
+        $mail_body .= "Content-Transfer-Encoding: $body_cte\n\n";
         $mail_body .= "$body\n\n";
 
         return $mail_body;

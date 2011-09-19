@@ -91,12 +91,18 @@ if (!function_exists("quoted_printable_encode")) {
 // See also http://developer.berlios.de/mantis/view.php?id=311
 function icalTimezoneFix($ical) {
 
+    $stdTZpos = strpos($ical, "BEGIN:STANDARD");
+    $dltTZpos = strpos($ical, "BEGIN:DAYLIGHT");
+
+    // do not try to fix ical if TZ definitions are not set
+    if ($stdTZpos === false || $dltTZpos === false)
+        return $ical;
+
     $eventDate = substr($ical, (strpos($ical, ":", strpos($ical, "DTSTART", strpos($ical, "BEGIN:VEVENT")))+1), 8);
-    $posStd = strpos($ical, "DTSTART:", strpos($ical, "BEGIN:STANDARD")) + strlen("DTSTART:");
-    $posDst = strpos($ical, "DTSTART:", strpos($ical, "BEGIN:DAYLIGHT")) + strlen("DTSTART:");
+    $posStd = strpos($ical, "DTSTART:", $stdTZpos) + strlen("DTSTART:");
+    $posDst = strpos($ical, "DTSTART:",$dltTZpos) + strlen("DTSTART:");
     $beginStandard = substr($ical, $posStd , 8);
     $beginDaylight = substr($ical, $posDst , 8);
-
     if (($eventDate < $beginStandard) && ($eventDate < $beginDaylight) ) {
         debugLog("icalTimezoneFix for event on $eventDate, standard:$beginStandard, daylight:$beginDaylight");
         $year = intval(date("Y")) - 1;

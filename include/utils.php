@@ -100,10 +100,13 @@ function hex2bin($data) {
     return pack("H*", $data);
 }
 
-function utf8_to_windows1252($string, $option = "")
+//if the ICS backend is loaded in CombinedBackend and Zarafa > 7
+//STORE_SUPPORTS_UNICODE is true and the convertion will not be done
+//for other backends.
+function utf8_to_windows1252($string, $option = "", $force_convert = false)
 {
     //if the store supports unicode return the string without converting it
-    if (defined('STORE_SUPPORTS_UNICODE') && STORE_SUPPORTS_UNICODE == true) return $string;
+    if (!$force_convert && defined('STORE_SUPPORTS_UNICODE') && STORE_SUPPORTS_UNICODE == true) return $string;
 
     if (function_exists("iconv")){
         return @iconv("UTF-8", "Windows-1252" . $option, $string);
@@ -112,10 +115,10 @@ function utf8_to_windows1252($string, $option = "")
     }
 }
 
-function windows1252_to_utf8($string, $option = "")
+function windows1252_to_utf8($string, $option = "", $force_convert = false)
 {
     //if the store supports unicode return the string without converting it
-    if (defined('STORE_SUPPORTS_UNICODE') && STORE_SUPPORTS_UNICODE == true) return $string;
+    if (!$force_convert && defined('STORE_SUPPORTS_UNICODE') && STORE_SUPPORTS_UNICODE == true) return $string;
 
     if (function_exists("iconv")){
         return @iconv("Windows-1252", "UTF-8" . $option, $string);
@@ -231,16 +234,16 @@ function getICalUidFromOLUid($olUid){
  *
  */
 function getOLUidFromICalUid($icalUid) {
-	if (strlen($icalUid) <= 64) {
-		$len = 13 + strlen($icalUid);
-		$OLUid = pack("V", $len);
-		$OLUid .= "vCal-Uid";
-		$OLUid .= pack("V", 1);
-		$OLUid .= $icalUid;
-		return hex2bin("040000008200E00074C5B7101A82E0080000000000000000000000000000000000000000". bin2hex($OLUid). "00");
-	}
-	else
-	   return hex2bin($icalUid);
+    if (strlen($icalUid) <= 64) {
+        $len = 13 + strlen($icalUid);
+        $OLUid = pack("V", $len);
+        $OLUid .= "vCal-Uid";
+        $OLUid .= pack("V", 1);
+        $OLUid .= $icalUid;
+        return hex2bin("040000008200E00074C5B7101A82E0080000000000000000000000000000000000000000". bin2hex($OLUid). "00");
+    }
+    else
+       return hex2bin($icalUid);
 }
 
 /**
@@ -258,9 +261,9 @@ function extractBaseDate($goid, $recurStartTime) {
     $year = hexdec(substr($hexbase, 0, 4));
 
     if ($day && $month && $year) {
-		$h = $recurStartTime >> 12;
-		$m = ($recurStartTime - $h * 4096) >> 6;
-		$s = $recurStartTime - $h * 4096 - $m * 64;
+        $h = $recurStartTime >> 12;
+        $m = ($recurStartTime - $h * 4096) >> 6;
+        $s = $recurStartTime - $h * 4096 - $m * 64;
 
         return gmmktime($h, $m, $s, $month, $day, $year);
     }
@@ -310,5 +313,95 @@ END;
 
     header("Content-type: text/html");
     print $zpush_legal;
+}
+
+
+/**
+Our own utf7_decode function because imap_utf7_decode converts a string
+into ISO-8859-1 encoding which doesn't have euro sign (it will be converted
+into two chars: [space](ascii 32) and "¬" ("not sign", ascii 172)). Also
+php iconv function expects '+' as delimiter instead of '&' like in IMAP.
+
+@param string $str IMAP folder name
+@return string
+*/
+function zp_utf7_iconv_decode($string) {
+    //do not alter string if there aren't any '&' or '+' chars because
+    //it won't have any utf7-encoded chars and nothing has to be escaped.
+    if (strpos($string, '&') === false && strpos($string, '+') === false ) return $string;
+
+    //Get the string length and go back through it making the replacements
+    //necessary
+    $len = strlen($string) - 1;
+    while ($len > 0) {
+        //look for '&-' sequence and replace it with '&'
+        if ($len > 0 && $string{($len-1)} == '&' && $string{$len} == '-') {
+            $string = substr_replace($string, '&', $len - 1, 2);
+            $len--; //decrease $len as this char has alreasy been processed
+        }
+        //search for '&' which weren't found in if clause above and
+        //replace them with '+' as they mark an utf7-encoded char
+        if ($len > 0 && $string{($len-1)} == '&') {
+            $string = substr_replace($string, '+', $len - 1, 1);
+            $len--; //decrease $len as this char has alreasy been processed
+        }
+        //finally "escape" all remaining '+' chars
+        if ($len > 0 && $string{($len-1)} == '+') {
+            $string = substr_replace($string, '+-', $len - 1, 1);
+        }
+        $len--;
+    }
+    return $string;
+}
+
+
+/**
+Our own utf7_encode function because the string has to be converted from
+standard UTF7 into modified UTF7 (aka UTF7-IMAP).
+
+@param string $str IMAP folder name
+@return string
+*/
+function zp_utf7_iconv_encode($string) {
+    //do not alter string if there aren't any '&' or '+' chars because
+    //it won't have any utf7-encoded chars and nothing has to be escaped.
+    if (strpos($string, '&') === false && strpos($string, '+') === false ) return $string;
+
+    //Get the string length and go back through it making the replacements
+    //necessary
+    $len = strlen($string) - 1;
+    while ($len > 0) {
+        //look for '&-' sequence and replace it with '&'
+        if ($len > 0 && $string{($len-1)} == '+' && $string{$len} == '-') {
+            $string = substr_replace($string, '+', $len - 1, 2);
+            $len--; //decrease $len as this char has alreasy been processed
+        }
+        //search for '&' which weren't found in if clause above and
+        //replace them with '+' as they mark an utf7-encoded char
+        if ($len > 0 && $string{($len-1)} == '+') {
+            $string = substr_replace($string, '&', $len - 1, 1);
+            $len--; //decrease $len as this char has alreasy been processed
+        }
+        //finally "escape" all remaining '+' chars
+        if ($len > 0 && $string{($len-1)} == '&') {
+            $string = substr_replace($string, '&-', $len - 1, 1);
+        }
+        $len--;
+    }
+    return $string;
+}
+
+function zp_utf7_to_utf8($string) {
+    if (function_exists("iconv")){
+        return @iconv("UTF7", "UTF-8", $string);
+    }
+    return $string;
+}
+
+function zp_utf8_to_utf7($string) {
+    if (function_exists("iconv")){
+        return @iconv("UTF-8", "UTF7", $string);
+    }
+    return $string;
 }
 ?>

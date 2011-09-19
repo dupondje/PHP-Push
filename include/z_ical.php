@@ -192,6 +192,11 @@ class ZPush_ical{
         if ($regs[1] < 1970) {
             $regs[1] = '1971';
         }
+
+        if (!isset($regs[4]) || !is_numeric($regs[4])) $regs[4] = 0;
+        if (!isset($regs[5]) || !is_numeric($regs[5])) $regs[5] = 0;
+        if (!isset($regs[6]) || !is_numeric($regs[6])) $regs[6] = 0;
+
         return gmmktime($regs[4], $regs[5], $regs[6], $regs[2], $regs[3], $regs[1]);
     }
 }
