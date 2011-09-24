@@ -378,13 +378,13 @@ class BackendCombined extends BackendDiff {
 		{
 			$wb = $this->_backends['i']->GetWasteBasket($class);
 			if ($wb)
-				return $this->_config['i'].$wb;
+				return 'i'.$this->_config['delimiter'].$wb;
 		}
 		if ($class == "Calendar" || $class == "Tasks")
 		{
 			$wb = $this->_backends['c']->GetWasteBasket($class);
 			if ($wb)
-				return $this->_config['c'].$wb;
+				return 'c'.$this->_config['delimiter'].$wb;
 		}
 		return false;
 	}
