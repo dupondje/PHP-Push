@@ -671,7 +671,12 @@ class BackendCalDav extends BackendDiff {
                 if (is_object($val)) {
                     $trigger = $val->getProperty("trigger");
                     if (is_array($trigger)) {
-                        $message->$e[0] = $trigger["min"];
+                        if ($trigger["min"]) {
+                            $message->$e[0] = $trigger["min"];
+                        }
+                        else {
+                            $message->$e[0] = "0";
+                        }
                     } else {
                         $message->$e[0] = "";                   
                     }
