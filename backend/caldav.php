@@ -590,7 +590,7 @@ class BackendCalDav extends BackendDiff {
                         if (!empty($val['TZID'])) {
                             $message->timezone = $this->getTimezoneString($val['TZID']);
                         }
-                        $val = $this_>makeGMTTime($val);
+                        $val = $this->makeGMTTime($val);
                     } else {
                         $val =  $this->parseDateToOutlook($val);
                     }
