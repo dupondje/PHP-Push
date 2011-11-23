@@ -270,7 +270,7 @@ class BackendCalDav extends BackendDiff {
                     $tmp->deleted = "0";
                     //The exceptionstarttime is the ORIGINAL starttime of the event
                     //On Thunderbird this is equal to the RECCURENCE-ID (which is in $val)
-                    $tmp->exceptionstarttime = mktime($val['hour'], $val['min'], $val['sec'], $val['month'], $val['day'], $val['year']);
+                    $tmp->exceptionstarttime = $this->makeGMTTime($val);
                     unset($tmp->uid);
                     unset($tmp->exceptions);
                     array_push($fullexceptionsarray, $tmp);
@@ -804,15 +804,6 @@ class BackendCalDav extends BackendDiff {
         return gmdate('Ymd\THis\Z', $ts);
     }
  
-    function parseDateUntil($ts) {
-        $ts = getdate($ts);
-        if ($ts['hour'] != 0 || $ts['minutes'] != 0 || $ts['seconds'] != 0)
-        {
-            $ts = mktime(0, 0, 0, $ts['month'], $ts['day'], $ts['year']) + (24*60*60);
-        } 
-        return date('Ymd\THis', $ts);
-    }
-    
     function parseDateToOutlook($ts) {
         return strtotime($ts);
     }
