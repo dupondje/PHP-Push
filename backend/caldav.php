@@ -588,7 +588,7 @@ class BackendCalDav extends BackendDiff {
                     // convert to date
                     if (is_array($val)) {
                         if (!empty($val['TZID'])) {
-                            $message->timezone = getTimezoneString($val['TZID']);
+                            $message->timezone = $this->getTimezoneString($val['TZID']);
                         }
                         $val = $this_>makeGMTTime($val);
                     } else {
@@ -641,7 +641,7 @@ class BackendCalDav extends BackendDiff {
                 if ($e[1] == 11) {
                     if (is_array($val)) {
                         if (!empty($val['TZID'])) {
-                            $message->timezone = getTimezoneString($val['TZID']);
+                            $message->timezone = $this->getTimezoneString($val['TZID']);
                         }
                         $val = $this->makeGMTTime($val);
                     } else {
