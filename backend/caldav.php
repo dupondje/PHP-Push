@@ -11,6 +11,7 @@ class BackendCalDav extends BackendDiff {
     var $_path;
     var $_events = array();
     var $_tasks = array();
+    var $_currentTimezone = null;
 
     function BackendCalDAV($config) {
         $this->_config = $config;
@@ -247,6 +248,10 @@ class BackendCalDav extends BackendDiff {
         $v = new vcalendar();
         $v->runparse($output);
         $v->sort();
+        
+        if ($vtimezone = $v->getComponent( 'vtimezone' )) {
+            $this->_currentTimezone = $vtimezone->getProperty('tzid');
+        }
                         
         if ($folderid == "tasks") {
             while ($vtodo = $v->getComponent('vtodo', $vcounter)) {
@@ -427,7 +432,7 @@ class BackendCalDav extends BackendDiff {
     }
 
     function setoutlooktimezone($message, $vtimezone) {
-        //$message->timezone = $vtimezone->getProperty('tzid');
+        $message->timezone = $this->getTimezoneString($this->_currentTimezone);
         return $message;
     }
     
@@ -582,14 +587,10 @@ class BackendCalDav extends BackendDiff {
                 if ($e[1] == 3) {
                     // convert to date
                     if (is_array($val)) {
-                        if ( !empty($val['TZID'])) {
-                            //$message->timezone = $val['TZID'];
+                        if (!empty($val['TZID'])) {
+                            $message->timezone = getTimezoneString($val['TZID']);
                         }
-                        if (array_key_exists('hour', $val) && array_key_exists('min', $val) && array_key_exists('sec', $val)) {
-                            $val = mktime($val['hour'], $val['min'], $val['sec'], $val['month'], $val['day'], $val['year']);
-                        } else {
-                            $val = mktime(0, 0, 0, $val['month'], $val['day'], $val['year']);
-                        }
+                        $val = $this_>makeGMTTime($val);
                     } else {
                         $val =  $this->parseDateToOutlook($val);
                     }
@@ -639,14 +640,10 @@ class BackendCalDav extends BackendDiff {
                 }
                 if ($e[1] == 11) {
                     if (is_array($val)) {
-                        if ( !empty($val['TZID'])) {
-                            //$message->timezone = $val['TZID'];
+                        if (!empty($val['TZID'])) {
+                            $message->timezone = getTimezoneString($val['TZID']);
                         }
-                        if (array_key_exists('hour', $val) && array_key_exists('min', $val) && array_key_exists('sec', $val)) {
-                            $val = mktime($val['hour'], $val['min'], $val['sec'], $val['month'], $val['day'], $val['year']);
-                        } else {
-                            $val = mktime(0, 0, 0, $val['month'], $val['day'], $val['year']);
-                        }
+                        $val = $this->makeGMTTime($val);
                     } else {
                         $val =  $this->parseDateToOutlook($val);
                     }
@@ -853,6 +850,37 @@ class BackendCalDav extends BackendDiff {
         }
         $timestamp= mktime($hours,$minutes,$seconds,$month,$day,$year);
         return $timestamp;
+    }
+   
+    function makeGMTTime($val)
+    {
+        $tz = timezone_open('GMT');
+        if (!empty($val['TZID'])) {
+            $tz = timezone_open($val['TZID']);
+        }
+        elseif ($this->_currentTimezone)
+        {
+            $tz = timezone_open($this->_currentTimezone);
+        }
+        $timestr = null;
+        $date = null;
+        if (array_key_exists('hour', $val) && array_key_exists('min', $val) && array_key_exists('sec', $val)) {
+            $timestr = sprintf("%d-%d-%d %d:%d:%d", $val['year'], $val['month'], $val['day'], $val['hour'], $val['min'], $val['sec']);
+            $date = date_create_from_format('Y-m-d H:i:s', $timestr, $tz);
+        }
+        else {
+            $timestr = sprintf("%d-%d-%d", $val['year'], $val['month'], $val['day']);
+            $date = date_create_from_format('Y-m-d', $timestr, $tz);
+        }
+        return date_timestamp_get($date);
+    }
+
+    /* TODO: Implement this better, now it always returns CET time or UTC time */
+    function getTimezoneString($timezone)
+    {
+        if ($timezone == "UTC")
+            return base64_encode(pack('la64vvvvvvvvla64vvvvvvvvl', 0, '', 0, 0, 0, 0, 0, 0, 0, 0, 0, '', 0, 0, 0, 0, 0, 0, 0, 0, 0));
+        return $this->_timezone = base64_encode(pack('la64vvvvvvvvla64vvvvvvvvl', -60, '', 0, 10, 0, 5, 3, 0, 0, 0, 0, '', 0, 3, 0, 5, 2, 0, 0, 0, -60));
     }
     
     function converttovevent($message) {
@@ -1123,11 +1151,7 @@ class BackendCalDav extends BackendDiff {
         $rtn = new SyncAppointment();
         $rtn->deleted = "1";
         if (is_array($val)) {
-            if (array_key_exists('hour', $val) && array_key_exists('min', $val) && array_key_exists('sec', $val)) {
-                $val = mktime($val['hour'], $val['min'], $val['sec'], $val['month'], $val['day'], $val['year']);
-            } else {
-                $val = mktime(0, 0, 0, $val['month'], $val['day'], $val['year']);                       
-            }
+            $val = $this->makeGMTTime($val);
         } else {
             $val =  $this->parseDateToOutlook($val);
         }
