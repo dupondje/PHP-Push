@@ -919,7 +919,7 @@ function HandleGetAttachment($backend, $protocolversion) {
 function HandlePing($backend, $devid) {
     global $zpushdtd, $input, $output;
     global $user, $auth_pw;
-    $timeout = 5;
+    $timeout = (defined('PING_INTERVAL') && PING_INTERVAL > 0) ? PING_INTERVAL : 10;
 
     debugLog("Ping received");
 

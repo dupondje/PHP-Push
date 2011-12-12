@@ -189,6 +189,7 @@ class BackendIMAP extends BackendDiff {
             if ($k == "from") {
                 if (trim($v)) {
                     $changedfrom = true;
+                    $envelopefrom = "-f$v";
                 } elseif (! trim($v) && IMAP_DEFAULTFROM) {
                     $changedfrom = true;
                     if      (IMAP_DEFAULTFROM == 'username') $v = $this->_username;

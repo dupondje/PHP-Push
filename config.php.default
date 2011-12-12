@@ -47,6 +47,11 @@
     //   SYNC_CONFLICT_OVERWRITE_PIM    - PIM is overwritten, Server wins (default)
     define('SYNC_CONFLICT_DEFAULT', SYNC_CONFLICT_OVERWRITE_PIM);
 
+    // Interval in seconds before checking if there are changes on the server when in Ping.
+    // It means the highest time span before a change is pushed to a mobile. Set it to
+    // a higher value if you have a high load on the server.
+    define('PING_INTERVAL', 10);
+
     // The data providers that we are using (see configuration below)
     $BACKEND_PROVIDER = "BackendCombined";
 
