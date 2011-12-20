@@ -880,12 +880,6 @@ class BackendCalDav extends BackendDiff {
         $vevent = new vevent();
         debugLog('CalDAV:: About to create mapping array.');
       
-        $mapping = array(
-            "dtstart" => array("starttime", 3),
-            "dtstamp" => array("dtstamp", 3),
-            "dtend" => array("endtime", 3)
-        );
-
         $allday = false;
         if (isset($message->alldayevent)) {
             $val = $message->alldayevent;
@@ -894,11 +888,13 @@ class BackendCalDav extends BackendDiff {
             }
         }
 
-        $vevent = $this->converttoical($vevent, $message, $mapping, $allday);
-
         $mapping = array(
+            "dtstart" => array("starttime", 3),
+            "dtstamp" => array("dtstamp", 3),
+            "dtend" => array("endtime", 3),
             "class" => array("sensitivity", 1),
             "description" => array("rtf", 10),
+            "description" => array("body", 2),
             "location" => array("location", 0),
             "organizer" => array("organizername", 4),
             "organizer" => array("organizeremail", 4),
