@@ -921,7 +921,9 @@ class BackendCalDav extends BackendDiff {
         $mapping = array(
             "class" => array("sensitivity", 1),
             "description" => array("rtf", 10),
+            "description" => array("body", 2),
             "completed" => array("datecompleted", 6),
+            "status" => array("complete", 11),
             "due" => array("utcduedate", 3),
             "dtstart" => array("utcstartdate", 3),
             "priority" => array("importance", 1),
@@ -1127,6 +1129,16 @@ class BackendCalDav extends BackendDiff {
                         $rtfparser->output("ascii");
                         $rtfparser->parse();
                         $icalcomponent->setProperty( $k, $rtfparser->out);
+                    }
+                    if ($e[1] == 11) {
+                        if ($val == "1") {
+                            $icalcomponent->setProperty( "PERCENT_COMPLETE", 100);
+                            $icalcomponent->setProperty( "STATUS", "COMPLETED");
+                        }
+                        else {
+                            $icalcomponent->setProperty( "PERCENT_COMPLETE", 0);
+                            $icalcomponent->setProperty( "STATUS", "NEEDS-ACTION");
+                        }
                     }
                 }
             }
