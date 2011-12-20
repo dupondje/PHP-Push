@@ -167,12 +167,12 @@ class BackendCalDav extends BackendDiff {
         $e = null;
         if ($folderid == "calendar")
         {
-            if (array_key_exists($id, $this->_events)
+            if (array_key_exists($id, $this->_events))
                 $e = $this->_events[$id];
         }
         if ($folderid == "tasks")
         {
-            if (array_key_exists($id, $this->_tasks)
+            if (array_key_exists($id, $this->_tasks))
                 $e = $this->_tasks[$id];
         }
         if ($e == null)
