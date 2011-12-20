@@ -254,14 +254,15 @@ class BackendCalDav extends BackendDiff {
         if ($vtimezone = $v->getComponent( 'vtimezone' )) {
             $this->_currentTimezone = $vtimezone->getProperty('tzid');
         }
-                        
+
+        
+        $vcounter = 1;
         if ($folderid == "tasks") {
             while ($vtodo = $v->getComponent('vtodo', $vcounter)) {
                 $message = $this->converttotask($vtodo, $truncsize);
                 $vcounter++;
             }
         } else {
-            $vcounter = 1;
             $fullexceptionsarray = array();
             while ($vevent = $v->getComponent( 'vevent', $vcounter)) {
                 $val = $vevent->getProperty("RECURRENCE-ID");
