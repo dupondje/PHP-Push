@@ -504,6 +504,7 @@ class BackendCalDav extends BackendDiff {
             "class" => array("sensitivity", 1),
             "description" => array("body", 2),
             "completed" => array("datecompleted", 11),
+            "status" => array("complete", 1),
             "due" => array("duedate", 11),
             "dtstart" => array("startdate", 11),
             "summary" => array("subject", 9),
@@ -578,6 +579,16 @@ class BackendCalDav extends BackendDiff {
                                     $val = 2;
                             }    
                         break;
+                        case "status":
+                            switch ($val) {
+                                case "NEEDS-ACTION":
+                                case "IN-PROCESS":
+                                case "CANCELLED":
+                                    $message->complete = 0;
+                                    break;
+                                case "COMPLETED":
+                                    $message->complete = 1;
+                            }
                     } 
                 }
                 if ($e[1] == 2) {
@@ -648,9 +659,8 @@ class BackendCalDav extends BackendDiff {
                         }
                         $val = $this->makeGMTTime($val);
                     } else {
-                        $val =  $this->parseDateToOutlook($val);
+                        $val = $this->parseDateToOutlook($val);
                     }
-                    $message->complete = "1";               
                 }
                 if ($e[1] == 13) {
                     $tmpcounter = 1;
