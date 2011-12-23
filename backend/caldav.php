@@ -579,7 +579,7 @@ class BackendCalDav extends BackendDiff {
                                     $val = 2;
                             }    
                         break;
-                        case "status":
+                        case "complete":
                             switch ($val) {
                                 case "NEEDS-ACTION":
                                 case "IN-PROCESS":
@@ -1035,7 +1035,7 @@ class BackendCalDav extends BackendDiff {
                     }
                     if ($e[1] == 3) {
                         // convert to date
-                        $val = $this->parseDate($val);
+                        $val = $this->parseGMTDate($val);
                         if ($allday) {
                             $icalcomponent->setProperty( $k, $val, array('VALUE'=>'DATE'));                     
                         } else {
@@ -1144,6 +1144,7 @@ class BackendCalDav extends BackendDiff {
                         $icalcomponent->setProperty( $k, $rtfparser->out);
                     }
                     if ($e[1] == 11) {
+                        debugLog("converttoical: completed is $val");
                         if ($val == "1") {
                             $icalcomponent->setProperty( "PERCENT_COMPLETE", 100);
                             $icalcomponent->setProperty( "STATUS", "COMPLETED");
