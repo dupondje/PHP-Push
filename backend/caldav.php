@@ -584,10 +584,11 @@ class BackendCalDav extends BackendDiff {
                                 case "NEEDS-ACTION":
                                 case "IN-PROCESS":
                                 case "CANCELLED":
-                                    $message->complete = "0";
+                                    $val = "0";
                                     break;
                                 case "COMPLETED":
-                                    $message->complete = "1";
+                                default:
+                                    $val = "1";
                             }
                     } 
                 }
