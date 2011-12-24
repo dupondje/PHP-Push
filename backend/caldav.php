@@ -382,7 +382,7 @@ class BackendCalDav extends BackendDiff {
         }
         
         // Set mod date to current
-        $mod = parseGMTDate(time());
+        $mod = $this->parseGMTDate(time());
 
         #   $somethingelse = convert2ical();
         debugLog('CalDAV::Converted to iCal: ');    
