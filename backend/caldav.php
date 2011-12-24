@@ -230,6 +230,7 @@ class BackendCalDav extends BackendDiff {
                 if ($m)
                     return date("Ymd\THis\Z", gmmktime($m['hour'], $m['min'], $m['sec'], $m['month'], $m['day'], $m['year']));
             }
+        }
         else {
             while ($vtodo = $v->getComponent('vtodo')) {
                 $m = $vtodo->getProperty('LAST-MODIFIED');
