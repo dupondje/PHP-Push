@@ -188,7 +188,7 @@ class BackendCalDav extends BackendDiff {
             debugLog('CalDAV::StatMessage('.$folderid.', '.$id.') is '.$event);
             $message = $e;
             $message["id"] = $e['href'];
-            $message["mod"] = $this->getLastModified($e['data']);
+            $message["mod"] = $this->getLastModified($e['data'], $event);
             debugLog('CalDAV::message moded at '. $message["mod"]);
             $message["flags"] = 1; // always 'read'
             $this->_events[$id] = $message;
@@ -198,7 +198,7 @@ class BackendCalDav extends BackendDiff {
             debugLog('CalDAV::StatMessage('.$folderid.', '.$id.') is '.$event);
             $message = $e;
             $message["id"] = $e['href'];
-            $message["mod"] = $this->getLastModified($e['data']);
+            $message["mod"] = $this->getLastModified($e['data'], $event);
             debugLog('CalDAV::message moded at '. $message["mod"]);
             $message["flags"] = 1; // always 'read'
             $this->_tasks[$id] = $message;
@@ -219,17 +219,25 @@ class BackendCalDav extends BackendDiff {
         }
     }
     
-    function getLastModified($data)
+    function getLastModified($data, $event)
     {
         $v = new vcalendar();
         $v->runparse($data);
         $v->sort();
-        while ($vevent = $v->getComponent('vevent')) {
-            $m = $vevent->getProperty('LAST-MODIFIED');
-            if ($m)
-                return date("d.m.Y H:i:s", mktime($m['hour'], $m['min'], $m['sec'], $m['month'], $m['day'], $m['year']));
+        if ($event) {
+            while ($vevent = $v->getComponent('vevent')) {
+                $m = $vevent->getProperty('LAST-MODIFIED');
+                if ($m)
+                    return date("Ymd\THis\Z", gmmktime($m['hour'], $m['min'], $m['sec'], $m['month'], $m['day'], $m['year']));
+            }
+        else {
+            while ($vtodo = $v->getComponent('vtodo')) {
+                $m = $vtodo->getProperty('LAST-MODIFIED');
+                if ($m)
+                    return date("Ymd\THis\Z", gmmktime($m['hour'], $m['min'], $m['sec'], $m['month'], $m['day'], $m['year']));
+            }
         }
-        return date("d.m.Y H:i:s");
+        return gmdate("Ymd\THis\Z");
     }
 
     function GetMessage($folderid, $id, $truncsize, $mimesupport = 0) {
@@ -372,13 +380,18 @@ class BackendCalDav extends BackendDiff {
             }
         }
         
+        // Set mod date to current
+        $mod = parseGMTDate(time());
+
         #   $somethingelse = convert2ical();
         debugLog('CalDAV::Converted to iCal: ');    
         $v = new vcalendar();
         
         if ($folderid == "tasks") {
+            $vtodo->setProperty("LAST-MODIFIED", $mod);
             $v->setComponent( $vtodo );
         } else {
+            $vevent->setProperty("LAST-MODIFIED", $mod);
             $v->setComponent( $vevent );
             if (count($exarray) > 0) {
                 foreach($exarray as $exvevent) {
@@ -406,6 +419,7 @@ class BackendCalDav extends BackendDiff {
         debugLog("CalDAV::output putted etag: $etag new etag: $retput");
 
         $obj = array();
+        $obj["mod"] = $mod;
         $obj["etag"] = $retput;
         $obj["href"] = $id;
         $obj["data"] = $output;
