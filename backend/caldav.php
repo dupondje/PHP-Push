@@ -209,7 +209,7 @@ class BackendCalDav extends BackendDiff {
 
     function isevent($data) {
         $v = new vcalendar();
-        $v->runparse($data);
+        $v->parse($data);
         $v->sort();
             
         if ($vevent = $v->getComponent('vevent')) {
@@ -222,7 +222,7 @@ class BackendCalDav extends BackendDiff {
     function getLastModified($data, $event)
     {
         $v = new vcalendar();
-        $v->runparse($data);
+        $v->parse($data);
         $v->sort();
         if ($event) {
             while ($vevent = $v->getComponent('vevent')) {
@@ -257,7 +257,7 @@ class BackendCalDav extends BackendDiff {
         
         //debugLog("CalDAV::Got File ".$id." now parseing ".$output);
         $v = new vcalendar();
-        $v->runparse($output);
+        $v->parse($output);
         $v->sort();
         
         if ($vtimezone = $v->getComponent( 'vtimezone' )) {
