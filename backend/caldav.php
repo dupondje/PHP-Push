@@ -98,7 +98,7 @@ class BackendCalDav extends BackendDiff {
                 $this->_tasks[$id] = $e;
                 $message = $this->StatMessage($folderid, $id);
             }
-        return $this->_tasks;
+            return $this->_tasks;
         }
         
         if (!$this->_tasks || !$this->_events)
@@ -210,7 +210,6 @@ class BackendCalDav extends BackendDiff {
     function isevent($data) {
         $v = new vcalendar();
         $v->parse($data);
-        $v->sort();
             
         if ($vevent = $v->getComponent('vevent')) {
             return true;
@@ -223,19 +222,18 @@ class BackendCalDav extends BackendDiff {
     {
         $v = new vcalendar();
         $v->parse($data);
-        $v->sort();
         if ($event) {
             while ($vevent = $v->getComponent('vevent')) {
                 $m = $vevent->getProperty('LAST-MODIFIED');
                 if ($m)
-                    return date("Ymd\THis\Z", gmmktime($m['hour'], $m['min'], $m['sec'], $m['month'], $m['day'], $m['year']));
+                    return gmdate("Ymd\THis\Z", gmmktime($m['hour'], $m['min'], $m['sec'], $m['month'], $m['day'], $m['year']));
             }
         }
         else {
             while ($vtodo = $v->getComponent('vtodo')) {
                 $m = $vtodo->getProperty('LAST-MODIFIED');
                 if ($m)
-                    return date("Ymd\THis\Z", gmmktime($m['hour'], $m['min'], $m['sec'], $m['month'], $m['day'], $m['year']));
+                    return gmdate("Ymd\THis\Z", gmmktime($m['hour'], $m['min'], $m['sec'], $m['month'], $m['day'], $m['year']));
             }
         }
         return gmdate("Ymd\THis\Z");
@@ -264,7 +262,6 @@ class BackendCalDav extends BackendDiff {
             $this->_currentTimezone = $vtimezone->getProperty('tzid');
         }
 
-        
         $vcounter = 1;
         if ($folderid == "tasks") {
             while ($vtodo = $v->getComponent('vtodo', $vcounter)) {
