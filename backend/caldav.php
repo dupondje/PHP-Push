@@ -930,7 +930,7 @@ class BackendCalDav extends BackendDiff {
             $dstBias = ($dstTime['offset'] - $stdTime['offset']) / -60;
             return base64_encode(pack('la64vvvvvvvvla64vvvvvvvvl', $stdBias, $stdName, 0, $stdMonth, $stdDay, 0, $stdHour, $stdMinute, 0, 0, 0, $dstName, 0, $dstMonth, $dstDay, 0, $dstHour, $dstMinute, 0, 0, $dstBias));
         }
-        catch {
+        catch (Exception $e) {
             // If invalid timezone is given, we return UTC
             return base64_encode(pack('la64vvvvvvvvla64vvvvvvvvl', 0, '', 0, 0, 0, 0, 0, 0, 0, 0, 0, '', 0, 0, 0, 0, 0, 0, 0, 0, 0));
         }
