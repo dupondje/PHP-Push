@@ -26,7 +26,7 @@ class BackendCalDav extends BackendDiff {
             # Enter variables to replace ...
             debugLog("CalDAV::Config: Updating $key");
             $this->_config[$key] = str_replace("%u", $username, $this->_config[$key]);
-            debugLog("CalDAV::Config: Updated $key with " .$this->_config[$key]);
+            debugLog("CalDAV::Config: Updated $key with " . $this->_config[$key]);
         }
         $this->cdc = new CalDAVClient($this->_config['CALDAV_SERVER'] . $this->_config['CALDAV_PATH'], $username, $password, "calendar" );                                            
         debugLog('CalDAV::Successful Logon To CalDAV Server');
@@ -100,9 +100,7 @@ class BackendCalDav extends BackendDiff {
             }
             return $this->_tasks;
         }
-        
-        if (!$this->_tasks || !$this->_events)
-            return false;
+        return false;
     }
 
     function GetFolderList() {
@@ -892,12 +890,51 @@ class BackendCalDav extends BackendDiff {
         return date_timestamp_get($date);
     }
 
-    /* TODO: Implement this better, now it always returns CET time or UTC time */
     function getTimezoneString($timezone)
     {
+        // UTC needs special handling
         if ($timezone == "UTC")
             return base64_encode(pack('la64vvvvvvvvla64vvvvvvvvl', 0, '', 0, 0, 0, 0, 0, 0, 0, 0, 0, '', 0, 0, 0, 0, 0, 0, 0, 0, 0));
-        return $this->_timezone = base64_encode(pack('la64vvvvvvvvla64vvvvvvvvl', -60, '', 0, 10, 0, 5, 3, 0, 0, 0, 0, '', 0, 3, 0, 5, 2, 0, 0, 0, -60));
+        try {
+            //Generate a timezone string (PHP 5.3 needed for this)
+            debugLog("getTimezoneString: Generating timezone base64");
+            $timezone = new DateTimeZone($timezone);
+            $trans = $timezone->getTransitions(time());
+            $stdTime = null;
+            $dstTime = null;
+            if ($trans[1]['isdst'] == 1)
+            {
+                $dstTime = $trans[1];
+                $stdTime = $trans[2];
+            }
+            else
+            {
+                $dstTime = $trans[2];
+                $stdTime = $trans[1];
+            }
+            $stdTime_array = date_parse($stdTime['time']);
+            $stdBias = $stdTime['offset'] / -60;
+            $stdName = $stdTime['abbr'];
+            $stdYear = 0;
+            $stdMonth = $stdTime_array['month'];
+            $stdDay = $stdTime_array['day'];
+            $stdHour = $stdTime_array['hour'];
+            $stdMinute = $stdTime_array['minute'];
+            $dstTime_array = date_parse($dstTime['time']);
+            $dstName = $dstTime['abbr'];
+            $dstYear = 0;
+            $dstMonth = $dstTime_array['month'];
+            $dstDay = $dstTime_array['day'];
+            $dstHour = $dstTime_array['hour'];
+            $dstMinute = $dstTime_array['minute'];
+            $dstBias = ($dstTime['offset'] - $stdTime['offset']) / -60;
+            return base64_encode(pack('la64vvvvvvvvla64vvvvvvvvl', $stdBias, $stdName, 0, $stdMonth, $stdDay, 0, $stdHour, $stdMinute, 0, 0, 0, $dstName, 0, $dstMonth, $dstDay, 0, $dstHour, $dstMinute, 0, 0, $dstBias));
+        }
+        catch {
+            // If invalid timezone is given, we return UTC
+            return base64_encode(pack('la64vvvvvvvvla64vvvvvvvvl', 0, '', 0, 0, 0, 0, 0, 0, 0, 0, 0, '', 0, 0, 0, 0, 0, 0, 0, 0, 0));
+        }
+        return base64_encode(pack('la64vvvvvvvvla64vvvvvvvvl', 0, '', 0, 0, 0, 0, 0, 0, 0, 0, 0, '', 0, 0, 0, 0, 0, 0, 0, 0, 0));
     }
     
     function converttovevent($message) {
