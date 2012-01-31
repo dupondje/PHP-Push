@@ -692,12 +692,16 @@ class BackendCalDav extends BackendDiff {
                 if (is_object($val)) {
                     $trigger = $val->getProperty("trigger");
                     if (is_array($trigger)) {
-                        if ($trigger["min"]) {
-                            $message->$e[0] = $trigger["min"];
+                        $reminder = 0;
+                        if (array_key_exists("min", $trigger))
+                        {
+                            $reminder += $trigger["min"];
                         }
-                        else {
-                            $message->$e[0] = "0";
+                        if (array_key_exists("hour", $trigger))
+                        {
+                            $reminder += $trigger["hour"] * 60;
                         }
+                        $message->$e[0] = $reminder;
                     } else {
                         $message->$e[0] = "";                   
                     }
