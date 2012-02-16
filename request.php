@@ -919,7 +919,7 @@ function HandleGetAttachment($backend, $protocolversion) {
 function HandlePing($backend, $devid) {
     global $zpushdtd, $input, $output;
     global $user, $auth_pw;
-    $timeout = (defined('PING_INTERVAL') && PING_INTERVAL > 0) ? PING_INTERVAL : 10;
+    $timeout = (defined('PING_INTERVAL') && PING_INTERVAL > 0) ? PING_INTERVAL : 30;
 
     debugLog("Ping received");
 
@@ -966,6 +966,11 @@ function HandlePing($backend, $devid) {
                     $e = $decoder->peek();
                     if($e[EN_TYPE] == EN_TYPE_ENDTAG) {
                         $decoder->getElementEndTag();
+                        break;
+                    }
+                    // Failsave - a devoce or attacker could send an unspecified tag which would cause an endless loop.
+                    else if (isset($e[EN_TAG]) && $e[EN_TAG] != SYNC_PING_SERVERENTRYID && $e[EN_TAG] != SYNC_PING_FOLDERTYPE) {
+                        debugLog("Found unspecified tag in ping folder definition:". print_r($e,1));
                         break;
                     }
                 }

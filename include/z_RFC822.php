@@ -167,6 +167,7 @@ class Mail_RFC822 {
         }
 
         if (isset($address))        $this->address        = $address;
+        if (strlen(trim($this->address)) == 0) return array();
         if (isset($default_domain)) $this->default_domain = $default_domain;
         if (isset($nest_groups))    $this->nestGroups     = $nest_groups;
         if (isset($validate))       $this->validate       = $validate;
@@ -928,9 +929,9 @@ class Mail_RFC822 {
      * @param  string  debug message
      * @return boolean always false as there was an error
      * @access private
-     */   
+     */
     function raiseError($message) {
         debugLog("z_RFC822 error: ". $message);
         return false;
-    }   
+    }
 }
