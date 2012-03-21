@@ -885,11 +885,12 @@ class BackendCalDav extends BackendDiff {
         $date = null;
         if (array_key_exists('hour', $val) && array_key_exists('min', $val) && array_key_exists('sec', $val)) {
             $timestr = sprintf("%d-%d-%d %d:%d:%d", $val['year'], $val['month'], $val['day'], $val['hour'], $val['min'], $val['sec']);
+            $date = date_create_from_format('Y-m-d H:i:s', $timestr, $tz);
         }
         else {
-            $timestr = sprintf("%d-%d-%d %d:%d:%d", $val['year'], $val['month'], $val['day'], 0, 0, 0);
+            $timestr = sprintf("%d-%d-%d %d:%d:%d UTC", $val['year'], $val['month'], $val['day'], 0, 0, 0);
+            $date = date_create_from_format('Y-m-d H:i:s T', $timestr, $tz);
         }
-        $date = date_create_from_format('Y-m-d H:i:s', $timestr, $tz);
         return date_timestamp_get($date);
     }
 
