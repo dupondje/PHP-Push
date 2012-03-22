@@ -906,6 +906,7 @@ class BackendCalDav extends BackendDiff {
             $str = $this->getTimezoneString($tz);
             if ($str == $tz_string)
             {
+                debugLog("getTimezoneFromString: timezone is " . $tz);
                 return $tz;
             }
         }
