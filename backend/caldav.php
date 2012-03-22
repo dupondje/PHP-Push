@@ -903,13 +903,14 @@ class BackendCalDav extends BackendDiff {
         array_unshift($identifiers, date_default_timezone_get());
         foreach ($identifiers as $tz)
         {
-            $str = $this->getTimezoneString($tz);
+            $str = $this->getTimezoneString($tz, false);
             if ($str == $tz_string)
             {
                 debugLog("getTimezoneFromString: timezone is " . $tz);
                 return $tz;
             }
         }
+        return date_default_timezone_get();
     }
 
     function getTimezoneString($timezone, $with_names = true)
@@ -993,6 +994,11 @@ class BackendCalDav extends BackendDiff {
         $vevent = new vevent();
         debugLog('CalDAV:: About to create mapping array.');
       
+        if (isset($message->timezone))
+        {
+            $this->_currentTimezone = $this->getTimezoneFromString($message->timezone);
+        }
+
         $allday = false;
         if (isset($message->alldayevent)) {
             $val = $message->alldayevent;
@@ -1135,10 +1141,14 @@ class BackendCalDav extends BackendDiff {
                     }
                     if ($e[1] == 3) {
                         // convert to date
-                        $val = $this->parseGMTDate($val);
                         if ($allday) {
+                            $date = date_create_from_format("U", $val);
+                            $tz = timezone_open ($this->_currentTimezone);
+                            date_timezone_set($date, $tz);
+                            $val = date_format($date, 'Ymd');
                             $icalcomponent->setProperty( $k, $val, array('VALUE'=>'DATE'));                     
                         } else {
+                            $val = $this->parseGMTDate($val);
                             $icalcomponent->setProperty( $k, $val);
                         }
                     }
