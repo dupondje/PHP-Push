@@ -893,6 +893,24 @@ class BackendCalDav extends BackendDiff {
         return date_timestamp_get($date);
     }
 
+    // This returns a timezone that matches the timezonestring.
+    // We can't be sure this is the one you chose, as multiple timezones have same timezonestring
+    function getTimezoneFromString($tz_string)
+    {
+        //Get a list of all timezones
+        $identifiers = DateTimeZone::listIdentifiers();
+        //Try the default timezone first
+        array_unshift($identifiers, date_default_timezone_get());
+        foreach ($identifiers as $tz)
+        {
+            $str = $this->getTimezoneString($tz);
+            if ($str == $tz_string)
+            {
+                return $tz;
+            }
+        }
+    }
+
     function getTimezoneString($timezone, $with_names = true)
     {
         // UTC needs special handling
