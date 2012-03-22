@@ -893,7 +893,7 @@ class BackendCalDav extends BackendDiff {
         return date_timestamp_get($date);
     }
 
-    function getTimezoneString($timezone)
+    function getTimezoneString($timezone, $with_names = true)
     {
         // UTC needs special handling
         if ($timezone == "UTC")
@@ -905,6 +905,10 @@ class BackendCalDav extends BackendDiff {
             $trans = $timezone->getTransitions(time());
             $stdTime = null;
             $dstTime = null;
+            if (count($trans) < 3)
+            {
+                throw new Exception();
+            }
             if ($trans[1]['isdst'] == 1)
             {
                 $dstTime = $trans[1];
@@ -915,23 +919,47 @@ class BackendCalDav extends BackendDiff {
                 $dstTime = $trans[2];
                 $stdTime = $trans[1];
             }
-            $stdTime_array = date_parse($stdTime['time']);
+            $stdTimeO = new DateTime($stdTime['time']);
+            $stdFirst = new DateTime(sprintf("first sun of %s %s", $stdTimeO->format('F'), $stdTimeO->format('Y')));
+            $stdInterval = $stdTimeO->diff($stdFirst);
+            $stdDays = $stdInterval->format('%d');
             $stdBias = $stdTime['offset'] / -60;
             $stdName = $stdTime['abbr'];
             $stdYear = 0;
-            $stdMonth = $stdTime_array['month'];
-            $stdDay = $stdTime_array['day'];
-            $stdHour = $stdTime_array['hour'];
-            $stdMinute = $stdTime_array['minute'];
-            $dstTime_array = date_parse($dstTime['time']);
+            $stdMonth = $stdTimeO->format('n');
+            $stdWeek = floor($stdDays/7)+1;
+            $stdDay = $stdDays%7;
+            $stdHour = $stdTimeO->format('H');
+            $stdMinute = $stdTimeO->format('i');
+            $stdTimeO->add(new DateInterval('P7D'));
+            if ($stdTimeO->format('n') != $stdMonth)
+            {
+                $stdWeek = 5;
+            }
+            $dstTimeO = new DateTime($dstTime['time']);
+            $dstFirst = new DateTime(sprintf("first sun of %s %s", $dstTimeO->format('F'), $dstTimeO->format('Y')));
+            $dstInterval = $dstTimeO->diff($dstFirst);
+            $dstDays = $dstInterval->format('%d');
             $dstName = $dstTime['abbr'];
             $dstYear = 0;
-            $dstMonth = $dstTime_array['month'];
-            $dstDay = $dstTime_array['day'];
-            $dstHour = $dstTime_array['hour'];
-            $dstMinute = $dstTime_array['minute'];
+            $dstMonth = $dstTimeO->format('n');
+            $dstWeek = floor($dstDays/7)+1;
+            $dstDay = $dstDays%7;
+            $dstHour = $dstTimeO->format('H');
+            $dstMinute = $dstTimeO->format('i');
+            if ($dstTimeO->format('n') != $dstMonth)
+            {
+                $dstWeek = 5;
+            }
             $dstBias = ($dstTime['offset'] - $stdTime['offset']) / -60;
-            return base64_encode(pack('la64vvvvvvvvla64vvvvvvvvl', $stdBias, $stdName, 0, $stdMonth, $stdDay, 0, $stdHour, $stdMinute, 0, 0, 0, $dstName, 0, $dstMonth, $dstDay, 0, $dstHour, $dstMinute, 0, 0, $dstBias));
+            if ($with_names)
+            {
+                return base64_encode(pack('la64vvvvvvvvla64vvvvvvvvl', $stdBias, $stdName, 0, $stdMonth, $stdDay, $stdWeek, $stdHour, $stdMinute, 0, 0, 0, $dstName, 0, $dstMonth, $dstDay, $dstWeek, $dstHour, $dstMinute, 0, 0, $dstBias));
+            }
+            else
+            {
+                return base64_encode(pack('la64vvvvvvvvla64vvvvvvvvl', $stdBias, '', 0, $stdMonth, $stdDay, $stdWeek, $stdHour, $stdMinute, 0, 0, 0, '', 0, $dstMonth, $dstDay, $dstWeek, $dstHour, $dstMinute, 0, 0, $dstBias));
+            }
         }
         catch (Exception $e) {
             // If invalid timezone is given, we return UTC
