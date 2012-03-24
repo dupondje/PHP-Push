@@ -192,7 +192,7 @@ switch($_SERVER["REQUEST_METHOD"]) {
     case 'OPTIONS':
         header("MS-Server-ActiveSync: 6.5.7638.1");
         header("MS-ASProtocolVersions: 1.0,2.0,2.1,2.5");
-        header("MS-ASProtocolCommands: Sync,SendMail,SmartForward,SmartReply,GetAttachment,GetHierarchy,CreateCollection,DeleteCollection,MoveCollection,FolderSync,FolderCreate,FolderDelete,FolderUpdate,MoveItems,GetItemEstimate,MeetingResponse,ResolveRecipients,ValidateCert,Provision,Search,Ping");
+        header("MS-ASProtocolCommands: Sync,SendMail,SmartForward,SmartReply,GetAttachment,GetHierarchy,CreateCollection,DeleteCollection,MoveCollection,FolderSync,FolderCreate,FolderDelete,FolderUpdate,MoveItems,GetItemEstimate,MeetingResponse,ResolveRecipients,ValidateCert,".(PROVISIONING === true ? "Provision,":"")."Search,Ping");
         debugLog("Options request");
         break;
     case 'POST':
