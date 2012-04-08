@@ -12,6 +12,8 @@
 * Consult LICENSE file for details
 ************************************************/
 
+include_once('diffbackend.php');
+
 //the ExportHierarchyChangesCombined class is returned from GetExporter for hierarchy changes.
 //it combines the hierarchy changes from all backends and prepends all folderids with the backendid
 
