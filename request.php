@@ -497,7 +497,7 @@ function HandleSync($backend, $protocolversion, $devid) {
 
         // limit items to be synchronized to the mobiles if configured
         if (defined('SYNC_FILTERTIME_MAX') && SYNC_FILTERTIME_MAX > SYNC_FILTERTYPE_ALL &&
-            (!isset($collection["filtertype"]) || $collection["filtertype"] > SYNC_FILTERTIME_MAX)) {
+            (!isset($collection["filtertype"]) || $collection["filtertype"] == SYNC_FILTERTYPE_ALL || $collection["filtertype"] > SYNC_FILTERTIME_MAX)) {
                 $collection["filtertype"] = SYNC_FILTERTIME_MAX;
         }
 

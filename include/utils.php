@@ -92,14 +92,6 @@ function _getFolderID($devid, $class) {
     return false;
 }
 
-/**
- * Function which converts a hex entryid to a binary entryid.
- * @param string @data the hexadecimal string
- */
-function hex2bin($data) {
-    return pack("H*", $data);
-}
-
 //if the ICS backend is loaded in CombinedBackend and Zarafa > 7
 //STORE_SUPPORTS_UNICODE is true and the convertion will not be done
 //for other backends.
@@ -403,5 +395,19 @@ function zp_utf8_to_utf7($string) {
         return @iconv("UTF-8", "UTF7", $string);
     }
     return $string;
+}
+
+/**
+* Indicates if the specified folder type is a system folder
+*
+* @param int            $foldertype
+*
+* @access public
+* @return boolean
+*/
+function isSystemFolder($foldertype) {
+    return ($foldertype == SYNC_FOLDER_TYPE_INBOX || $foldertype == SYNC_FOLDER_TYPE_DRAFTS || $foldertype == SYNC_FOLDER_TYPE_WASTEBASKET || $foldertype == SYNC_FOLDER_TYPE_SENTMAIL ||
+    $foldertype == SYNC_FOLDER_TYPE_OUTBOX || $foldertype == SYNC_FOLDER_TYPE_TASK || $foldertype == SYNC_FOLDER_TYPE_APPOINTMENT || $foldertype == SYNC_FOLDER_TYPE_CONTACT ||
+    $foldertype == SYNC_FOLDER_TYPE_NOTE || $foldertype == SYNC_FOLDER_TYPE_JOURNAL) ? true:false;
 }
 ?>

@@ -192,7 +192,7 @@ class DiffState {
             return false;
         }
 
-        if($state["mod"] != $oldstat["mod"]) {
+        if($stat["mod"] != $oldstat["mod"]) {
             // Changed here
             if($type == "delete" || $type == "change")
                 return true; // changed here, but deleted there -> conflict, or changed here and changed there -> conflict

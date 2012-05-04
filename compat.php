@@ -111,4 +111,14 @@ function icalTimezoneFix($ical) {
 
     return $ical;
 }
+
+if (!function_exists("hex2bin")) {
+    /**
+     * Function which converts a hex entryid to a binary entryid.
+     * @param string @data the hexadecimal string
+     */
+    function hex2bin($data) {
+        return pack("H*", $data);
+    }
+}
 ?>
